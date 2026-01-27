@@ -9,6 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -19,6 +20,12 @@ interface DataTableViewOptionsProps<TData> {
 }
 
 export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps<TData>) {
+  const handleResetColumns = () => {
+    table.resetColumnVisibility();
+    table.resetColumnSizing();
+    table.resetColumnOrder();
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -45,6 +52,9 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
               </DropdownMenuCheckboxItem>
             );
           })}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={handleResetColumns}>Reset columns</DropdownMenuItem>
+        <DropdownMenuItem disabled>Order columns</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
