@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   type ColumnDef,
   type ColumnFiltersState,
+  type ColumnSizingState,
   getCoreRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
@@ -36,6 +37,7 @@ export function useDataTableInstance<TData, TValue>({
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({});
   const [pagination, setPagination] = React.useState({
     pageIndex: defaultPageIndex ?? 0,
     pageSize: defaultPageSize ?? 10,
@@ -50,14 +52,18 @@ export function useDataTableInstance<TData, TValue>({
       rowSelection,
       columnFilters,
       pagination,
+      columnSizing,
     },
     enableRowSelection,
-    getRowId: getRowId ?? ((row) => (row as any).id.toString()),
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
+    getRowId: getRowId ?? ((row) => (row as { id: string | number }).id.toString()),
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: setPagination,
+    onColumnSizingChange: setColumnSizing,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

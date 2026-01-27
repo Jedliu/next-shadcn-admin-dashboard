@@ -18,6 +18,7 @@ import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-ki
 import { type ColumnDef, flexRender, type Table as TanStackTable } from "@tanstack/react-table";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 import { DraggableRow } from "./draggable-row";
 
@@ -61,7 +62,9 @@ function renderTableBody<TData, TValue>({
   return table.getRowModel().rows.map((row) => (
     <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
       {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+        <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </TableCell>
       ))}
     </TableRow>
   ));
@@ -91,14 +94,33 @@ export function DataTable<TData, TValue>({
   }
 
   const tableContent = (
-    <Table className={className}>
+    <Table className={cn("table-fixed", className)} style={{ width: table.getTotalSize() }}>
       <TableHeader className="sticky top-0 z-10 bg-muted">
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id}>
             {headerGroup.headers.map((header) => {
               return (
-                <TableHead key={header.id} colSpan={header.colSpan}>
+                <TableHead
+                  key={header.id}
+                  colSpan={header.colSpan}
+                  className="group"
+                  style={{
+                    width: header.getSize(),
+                    position: "relative",
+                  }}
+                >
                   {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  {header.column.getCanResize() && (
+                    <div
+                      onMouseDown={header.getResizeHandler()}
+                      onTouchStart={header.getResizeHandler()}
+                      className="hover:!w-1 hover:!bg-primary absolute top-0 right-0 z-20 h-full w-px cursor-col-resize touch-none select-none bg-border opacity-0 group-hover:opacity-100"
+                      style={{
+                        transform: header.column.getIsResizing() ? "translateX(0)" : "",
+                      }}
+                      aria-hidden="true"
+                    />
+                  )}
                 </TableHead>
               );
             })}

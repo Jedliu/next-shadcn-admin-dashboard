@@ -44,6 +44,10 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     ),
     enableSorting: false,
     enableHiding: false,
+    enableResizing: false,
+    size: 48,
+    minSize: 48,
+    maxSize: 48,
   },
   {
     accessorKey: "header",
@@ -51,19 +55,21 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     cell: ({ row }) => {
       return <TableCellViewer item={row.original} />;
     },
-    enableSorting: false,
+    size: 360,
+    minSize: 80,
   },
   {
     accessorKey: "type",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Section Type" />,
     cell: ({ row }) => (
-      <div className="w-32">
+      <div className="w-32 max-w-full">
         <Badge variant="outline" className="px-1.5 text-muted-foreground">
           {row.original.type}
         </Badge>
       </div>
     ),
-    enableSorting: false,
+    size: 180,
+    minSize: 140,
   },
   {
     accessorKey: "status",
@@ -78,7 +84,8 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
         {row.original.status}
       </Badge>
     ),
-    enableSorting: false,
+    size: 160,
+    minSize: 140,
   },
   {
     accessorKey: "target",
@@ -104,7 +111,8 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
         />
       </form>
     ),
-    enableSorting: false,
+    size: 96,
+    minSize: 80,
   },
   {
     accessorKey: "limit",
@@ -130,7 +138,8 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
         />
       </form>
     ),
-    enableSorting: false,
+    size: 96,
+    minSize: 80,
   },
   {
     accessorKey: "reviewer",
@@ -149,7 +158,7 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
           </Label>
           <Select>
             <SelectTrigger
-              className="w-38 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
+              className="w-38 max-w-full **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
               size="sm"
               id={`${row.original.id}-reviewer`}
             >
@@ -163,7 +172,8 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
         </>
       );
     },
-    enableSorting: false,
+    size: 220,
+    minSize: 160,
   },
   {
     id: "actions",
@@ -186,5 +196,9 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
       </DropdownMenu>
     ),
     enableSorting: false,
+    enableResizing: false,
+    size: 56,
+    minSize: 56,
+    maxSize: 56,
   },
 ];

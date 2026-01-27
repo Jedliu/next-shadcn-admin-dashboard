@@ -25,10 +25,14 @@ function DragHandle({ id }: { id: number }) {
   );
 }
 
-export const dragColumn: ColumnDef<any> = {
+export const dragColumn: ColumnDef<unknown> = {
   id: "drag",
   header: () => null,
   cell: ({ row }) => <DragHandle id={row.original.id} />,
   enableSorting: false,
   enableHiding: false,
+  enableResizing: false,
+  size: 48,
+  minSize: 48,
+  maxSize: 48,
 };

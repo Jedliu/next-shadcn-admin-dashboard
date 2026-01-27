@@ -61,13 +61,13 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
         </div>
       </div>
       <TabsContent value="outline" className="relative flex flex-col gap-4 overflow-auto">
-        <div className="overflow-hidden rounded-lg border relative before:absolute before:top-0 before:left-0 before:right-0 before:h-10 before:bg-muted before:z-0 before:border-b before:border-border before:box-content">
+        <div className="relative overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:border-border before:border-b before:bg-muted">
           <DataTableNew
             dndEnabled
             table={table}
             columns={columns}
             onReorder={setData}
-            className="w-auto relative z-10 [&_thead_tr]:border-transparent"
+            className="relative z-10 w-auto [&_thead_tr]:border-transparent"
           />
         </div>
         <DataTablePagination table={table} />
