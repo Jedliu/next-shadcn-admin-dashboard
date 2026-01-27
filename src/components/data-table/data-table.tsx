@@ -26,6 +26,7 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   dndEnabled?: boolean;
   onReorder?: (newData: TData[]) => void;
+  className?: string;
 }
 
 function renderTableBody<TData, TValue>({
@@ -71,6 +72,7 @@ export function DataTable<TData, TValue>({
   columns,
   dndEnabled = false,
   onReorder,
+  className,
 }: DataTableProps<TData, TValue>) {
   const dataIds: UniqueIdentifier[] = table.getRowModel().rows.map((row) => Number(row.id) as UniqueIdentifier);
   const sortableId = React.useId();
@@ -89,7 +91,7 @@ export function DataTable<TData, TValue>({
   }
 
   const tableContent = (
-    <Table>
+    <Table className={className}>
       <TableHeader className="sticky top-0 z-10 bg-muted">
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id}>
