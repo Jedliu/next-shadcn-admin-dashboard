@@ -6,6 +6,37 @@ import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+type DrawerContentProps = React.ComponentProps<typeof DrawerPrimitive.Content> & {
+  /**
+   * For left/right drawers: distance (top/bottom and left/right) from the viewport edge.
+   * - number -> px
+   * - string -> any valid CSS length (e.g. "2rem", "24px", "10vh")
+   */
+  sideOffset?: number | string
+  /**
+   * For left/right drawers: horizontal offset from the viewport edge (left or right).
+   * Overrides `sideOffset` for the X axis.
+   */
+  sideOffsetX?: number | string
+  /**
+   * For left/right drawers: vertical offset from the viewport edge (top and bottom).
+   * Overrides `sideOffset` for the Y axis.
+   */
+  sideOffsetY?: number | string
+  /**
+   * For left/right drawers: width.
+   * - number -> px
+   * - string -> any valid CSS length (e.g. "420px", "75vw")
+   */
+  sideWidth?: number | string
+  /**
+   * For left/right drawers: max-width applied at `sm` breakpoint and up.
+   * - number -> px
+   * - string -> any valid CSS length (e.g. "32rem")
+   */
+  sideMaxWidth?: number | string
+}
+
 function Drawer({
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
@@ -49,8 +80,50 @@ function DrawerOverlay({
 function DrawerContent({
   className,
   children,
+  sideOffset,
+  sideOffsetX,
+  sideOffsetY,
+  sideWidth,
+  sideMaxWidth,
+  style,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+}: DrawerContentProps) {
+  const resolvedSideOffsetX = sideOffsetX ?? sideOffset
+  const resolvedSideOffsetY = sideOffsetY ?? sideOffset
+
+  const variableStyle = {
+    ...(resolvedSideOffsetX != null
+      ? {
+          ["--drawer-side-offset-x" as any]:
+            typeof resolvedSideOffsetX === "number"
+              ? `${resolvedSideOffsetX}px`
+              : resolvedSideOffsetX,
+        }
+      : {}),
+    ...(resolvedSideOffsetY != null
+      ? {
+          ["--drawer-side-offset-y" as any]:
+            typeof resolvedSideOffsetY === "number"
+              ? `${resolvedSideOffsetY}px`
+              : resolvedSideOffsetY,
+        }
+      : {}),
+    ...(sideWidth != null
+      ? {
+          ["--drawer-side-width" as any]:
+            typeof sideWidth === "number" ? `${sideWidth}px` : sideWidth,
+        }
+      : {}),
+    ...(sideMaxWidth != null
+      ? {
+          ["--drawer-side-max-width" as any]:
+            typeof sideMaxWidth === "number"
+              ? `${sideMaxWidth}px`
+              : sideMaxWidth,
+        }
+      : {}),
+  } as React.CSSProperties
+
   return (
     <DrawerPortal data-slot="drawer-portal">
       <DrawerOverlay />
@@ -59,12 +132,14 @@ function DrawerContent({
         // Prevent Vaul's default `::after` background extender from painting outside
         // the drawer when we use an inset (e.g. `right-4`) side drawer.
         data-vaul-custom-container="true"
+        style={{ ...variableStyle, ...style }}
         className={cn(
           "group/drawer-content bg-background fixed z-50 flex h-auto flex-col",
+          "[--drawer-side-offset-x:1rem] [--drawer-side-offset-y:1rem] [--drawer-side-width:75%] [--drawer-side-max-width:24rem]",
           "data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh] data-[vaul-drawer-direction=top]:rounded-b-lg data-[vaul-drawer-direction=top]:border-b",
           "data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80vh] data-[vaul-drawer-direction=bottom]:rounded-t-lg data-[vaul-drawer-direction=bottom]:border-t",
-          "data-[vaul-drawer-direction=right]:inset-y-4 data-[vaul-drawer-direction=right]:right-4 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=right]:rounded-lg data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=right]:shadow-lg data-[vaul-drawer-direction=right]:sm:max-w-sm",
-          "data-[vaul-drawer-direction=left]:inset-y-4 data-[vaul-drawer-direction=left]:left-4 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=left]:rounded-lg data-[vaul-drawer-direction=left]:border data-[vaul-drawer-direction=left]:shadow-lg data-[vaul-drawer-direction=left]:sm:max-w-sm",
+          "data-[vaul-drawer-direction=right]:top-[var(--drawer-side-offset-y)] data-[vaul-drawer-direction=right]:bottom-[var(--drawer-side-offset-y)] data-[vaul-drawer-direction=right]:right-[var(--drawer-side-offset-x)] data-[vaul-drawer-direction=right]:w-[var(--drawer-side-width)] data-[vaul-drawer-direction=right]:rounded-lg data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=right]:shadow-lg data-[vaul-drawer-direction=right]:sm:max-w-[var(--drawer-side-max-width)]",
+          "data-[vaul-drawer-direction=left]:top-[var(--drawer-side-offset-y)] data-[vaul-drawer-direction=left]:bottom-[var(--drawer-side-offset-y)] data-[vaul-drawer-direction=left]:left-[var(--drawer-side-offset-x)] data-[vaul-drawer-direction=left]:w-[var(--drawer-side-width)] data-[vaul-drawer-direction=left]:rounded-lg data-[vaul-drawer-direction=left]:border data-[vaul-drawer-direction=left]:shadow-lg data-[vaul-drawer-direction=left]:sm:max-w-[var(--drawer-side-max-width)]",
           className
         )}
         {...props}
