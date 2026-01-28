@@ -25,7 +25,7 @@ export function QuickCreateInset({ children }: { readonly children: React.ReactN
                   type="button"
                   onClick={() => setPinned(false)}
                   title="Unpin"
-                  className="ring-offset-background focus:ring-ring inline-flex size-8 items-center justify-center rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+                  className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
                   <PinOff className="size-4" />
                   <span className="sr-only">Unpin</span>
@@ -34,7 +34,7 @@ export function QuickCreateInset({ children }: { readonly children: React.ReactN
                   type="button"
                   onClick={() => setOpen(false)}
                   title="Close"
-                  className="ring-offset-background focus:ring-ring inline-flex size-8 items-center justify-center rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+                  className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
                   <XIcon className="size-4" />
                   <span className="sr-only">Close</span>

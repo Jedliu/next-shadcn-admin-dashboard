@@ -162,9 +162,13 @@ export function NavMain({ items }: NavMainProps) {
 
   const getSidebarRight = React.useCallback(() => {
     // `sidebar-inner` reflects the visible sidebar edge for all variants.
-    const el = document.querySelector<HTMLElement>('[data-slot="sidebar-inner"]');
-    if (!el) return 0;
-    return Math.round(el.getBoundingClientRect().right);
+    const inner = document.querySelector<HTMLElement>('[data-slot="sidebar-inner"]');
+    const container = document.querySelector<HTMLElement>('[data-slot="sidebar-container"]');
+    const gap = document.querySelector<HTMLElement>('[data-slot="sidebar-gap"]');
+    const rect = inner?.getBoundingClientRect() ?? container?.getBoundingClientRect();
+    if (rect?.right) return Math.round(rect.right);
+    if (gap) return Math.round(gap.getBoundingClientRect().right);
+    return 0;
   }, []);
 
   const updateSidebarRight = React.useCallback(() => {
@@ -205,6 +209,14 @@ export function NavMain({ items }: NavMainProps) {
     // Pinned (docked) mode is desktop-only.
     setQuickCreatePinned(false);
   }, [isMobile, setQuickCreatePinned]);
+
+  React.useEffect(() => {
+    if (isMobile || quickCreatePinned || !quickCreateOpen) return;
+    updateSidebarRight();
+    requestAnimationFrame(updateSidebarRight);
+    const timeout = window.setTimeout(updateSidebarRight, 120);
+    return () => window.clearTimeout(timeout);
+  }, [isMobile, quickCreateOpen, quickCreatePinned, updateSidebarRight]);
 
   const isItemActive = (url: string, subItems?: NavMainItem["subItems"]) => {
     if (subItems?.length) {
@@ -261,43 +273,51 @@ export function NavMain({ items }: NavMainProps) {
           <div
             data-slot="quick-create-flyout"
             aria-hidden={!quickCreateOpen}
-            className="fixed top-16 bottom-6 z-[80] w-[22rem] overflow-hidden rounded-lg border bg-background shadow-lg transition-[transform,opacity] duration-300 ease-out"
-            style={
-              {
-                left: (sidebarRightRef.current || sidebarRight || 0) + 16,
-                opacity: quickCreateOpen ? 1 : 0,
-                transform: quickCreateOpen ? "translate3d(0,0,0)" : "translate3d(calc(-100% - 16px),0,0)",
-                pointerEvents: quickCreateOpen ? "auto" : "none",
-              } as React.CSSProperties
-            }
+            className="pointer-events-none fixed top-0 right-0 bottom-0 left-0 z-[80] overflow-hidden"
+            style={{
+              clipPath: `inset(0 0 0 ${(sidebarRightRef.current || sidebarRight || 0) + 8}px)`,
+            }}
           >
-            <div className="flex items-start justify-between gap-3 border-b bg-muted/50 p-4">
-              <div className="min-w-0">
-                <h2 className="truncate font-semibold">Quick Create</h2>
-                <p className="text-muted-foreground text-sm">Create common items without leaving your current page.</p>
+            <div
+              className="absolute top-16 bottom-6 w-[22rem] overflow-hidden rounded-lg border bg-background shadow-lg transition-[left,opacity] duration-300 ease-out"
+              style={{
+                left: quickCreateOpen
+                  ? (sidebarRightRef.current || sidebarRight || 0) + 16
+                  : (sidebarRightRef.current || sidebarRight || 0) - 352,
+                opacity: quickCreateOpen && (sidebarRightRef.current || sidebarRight) > 0 ? 1 : 0,
+                pointerEvents: quickCreateOpen && (sidebarRightRef.current || sidebarRight) > 0 ? "auto" : "none",
+              }}
+            >
+              <div className="flex items-start justify-between gap-3 border-b bg-muted/50 p-4">
+                <div className="min-w-0">
+                  <h2 className="truncate font-semibold">Quick Create</h2>
+                  <p className="text-muted-foreground text-sm">
+                    Create common items without leaving your current page.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setQuickCreatePinned(true)}
+                    title="Pin"
+                    className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <Pin className="size-4" />
+                    <span className="sr-only">Pin</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickCreateOpen(false)}
+                    title="Close"
+                    className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <span className="sr-only">Close</span>
+                    <XIcon className="size-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setQuickCreatePinned(true)}
-                  title="Pin"
-                  className="ring-offset-background focus:ring-ring inline-flex size-8 items-center justify-center rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
-                >
-                  <Pin className="size-4" />
-                  <span className="sr-only">Pin</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setQuickCreateOpen(false)}
-                  title="Close"
-                  className="ring-offset-background focus:ring-ring inline-flex size-8 items-center justify-center rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
-                >
-                  <span className="sr-only">Close</span>
-                  <XIcon className="size-4" />
-                </button>
-              </div>
+              <QuickCreateActions className="flex-1 p-4" />
             </div>
-            <QuickCreateActions className="flex-1 p-4" />
           </div>,
           portalTarget,
         )
