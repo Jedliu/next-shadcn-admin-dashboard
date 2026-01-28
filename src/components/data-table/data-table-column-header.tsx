@@ -30,31 +30,10 @@ export function DataTableColumnHeader<TData, TValue>({
     return <div className={cn("truncate", className)}>{title}</div>;
   }
 
-  const handleSort = () => {
-    const currentSort = column.getIsSorted();
-    if (currentSort === false) {
-      // 当前无排序 → 升序
-      column.toggleSorting(false);
-    } else if (currentSort === "asc") {
-      // 当前升序 → 降序
-      column.toggleSorting(true);
-    } else {
-      // 当前降序 → 无排序
-      column.clearSorting();
-    }
-  };
-
   return (
-    <button
-      type="button"
-      className={cn(
-        "-mx-2 flex cursor-pointer select-none items-center space-x-2 rounded-md px-2 py-1 hover:bg-accent",
-        className,
-      )}
-      onClick={handleSort}
-    >
+    <div className={cn("-mx-2 flex items-center space-x-2 rounded-md px-2 py-1 hover:bg-accent", className)}>
       <span className="min-w-0 flex-1 truncate">{title}</span>
       {getSortIcon(column.getIsSorted())}
-    </button>
+    </div>
   );
 }

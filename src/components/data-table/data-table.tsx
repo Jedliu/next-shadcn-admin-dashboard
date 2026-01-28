@@ -99,11 +99,29 @@ export function DataTable<TData, TValue>({
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id}>
             {headerGroup.headers.map((header) => {
+              const canSort = header.column.getCanSort() && !header.isPlaceholder;
+              const handleSort = () => {
+                if (!canSort) return;
+
+                const currentSort = header.column.getIsSorted();
+                if (currentSort === false) {
+                  // Unsorted -> asc
+                  header.column.toggleSorting(false);
+                } else if (currentSort === "asc") {
+                  // asc -> desc
+                  header.column.toggleSorting(true);
+                } else {
+                  // desc -> unsorted
+                  header.column.clearSorting();
+                }
+              };
+
               return (
                 <TableHead
                   key={header.id}
                   colSpan={header.colSpan}
-                  className="group"
+                  className={cn("group", canSort && "cursor-pointer select-none")}
+                  onClick={canSort ? handleSort : undefined}
                   style={{
                     width: header.getSize(),
                     position: "relative",
@@ -112,8 +130,15 @@ export function DataTable<TData, TValue>({
                   {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   {header.column.getCanResize() && (
                     <div
-                      onMouseDown={header.getResizeHandler()}
-                      onTouchStart={header.getResizeHandler()}
+                      onMouseDown={(event) => {
+                        event.stopPropagation();
+                        header.getResizeHandler()(event);
+                      }}
+                      onTouchStart={(event) => {
+                        event.stopPropagation();
+                        header.getResizeHandler()(event);
+                      }}
+                      onClick={(event) => event.stopPropagation()}
                       className="hover:!w-1 hover:!bg-primary absolute top-0 right-0 z-20 h-full w-px cursor-col-resize touch-none select-none bg-border opacity-0 group-hover:opacity-100"
                       style={{
                         transform: header.column.getIsResizing() ? "translateX(0)" : "",
