@@ -273,7 +273,7 @@ export function NavMain({ items }: NavMainProps) {
           <div
             data-slot="quick-create-flyout"
             aria-hidden={!quickCreateOpen}
-            className="pointer-events-none fixed top-0 right-0 bottom-0 left-0 z-[80] overflow-hidden"
+            className="pointer-events-none fixed top-0 right-0 bottom-0 left-0 z-40 overflow-hidden"
             style={{
               clipPath: `inset(0 0 0 ${(sidebarRightRef.current || sidebarRight || 0) + 8}px)`,
             }}
