@@ -1,12 +1,18 @@
 "use client";
 
+import * as React from "react";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { ChevronRight, MailIcon, PlusCircleIcon } from "lucide-react";
+import { ChevronRight, MailIcon, Pin, PlusCircleIcon, XIcon } from "lucide-react";
+import { createPortal } from "react-dom";
 
+import { QuickCreateActions } from "@/app/(main)/dashboard/_components/quick-create/quick-create-actions";
+import { useQuickCreate } from "@/app/(main)/dashboard/_components/quick-create/quick-create-provider";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -144,6 +150,61 @@ const NavItemCollapsed = ({
 export function NavMain({ items }: NavMainProps) {
   const path = usePathname();
   const { state, isMobile } = useSidebar();
+  const {
+    open: quickCreateOpen,
+    pinned: quickCreatePinned,
+    setOpen: setQuickCreateOpen,
+    setPinned: setQuickCreatePinned,
+  } = useQuickCreate();
+  const [sidebarRight, setSidebarRight] = React.useState(0);
+  const sidebarRightRef = React.useRef(0);
+  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
+
+  const getSidebarRight = React.useCallback(() => {
+    // `sidebar-inner` reflects the visible sidebar edge for all variants.
+    const el = document.querySelector<HTMLElement>('[data-slot="sidebar-inner"]');
+    if (!el) return 0;
+    return Math.round(el.getBoundingClientRect().right);
+  }, []);
+
+  const updateSidebarRight = React.useCallback(() => {
+    const nextRight = getSidebarRight();
+    if (!nextRight) return;
+    sidebarRightRef.current = nextRight;
+    setSidebarRight(nextRight);
+  }, [getSidebarRight]);
+
+  const toggleQuickCreate = React.useCallback(() => {
+    setQuickCreateOpen((prev) => !prev);
+  }, [setQuickCreateOpen]);
+
+  React.useEffect(() => {
+    if (isMobile) return;
+    const el = document.querySelector<HTMLElement>('[data-slot="sidebar-inner"]');
+    if (!el) return;
+
+    updateSidebarRight();
+
+    const ro = new ResizeObserver(updateSidebarRight);
+    ro.observe(el);
+    window.addEventListener("resize", updateSidebarRight);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", updateSidebarRight);
+    };
+  }, [isMobile, updateSidebarRight]);
+
+  React.useEffect(() => {
+    if (isMobile) return;
+    setPortalTarget(document.body);
+  }, [isMobile]);
+
+  React.useEffect(() => {
+    if (!isMobile) return;
+    // Pinned (docked) mode is desktop-only.
+    setQuickCreatePinned(false);
+  }, [isMobile, setQuickCreatePinned]);
 
   const isItemActive = (url: string, subItems?: NavMainItem["subItems"]) => {
     if (subItems?.length) {
@@ -165,6 +226,7 @@ export function NavMain({ items }: NavMainProps) {
               <SidebarMenuButton
                 tooltip="Quick Create"
                 className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+                onClick={toggleQuickCreate}
               >
                 <PlusCircleIcon />
                 <span>Quick Create</span>
@@ -181,6 +243,66 @@ export function NavMain({ items }: NavMainProps) {
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
+
+      {isMobile ? (
+        <Drawer open={quickCreateOpen} onOpenChange={setQuickCreateOpen} direction="bottom" modal noBodyStyles={false}>
+          <DrawerContent>
+            <DrawerHeader className="gap-1">
+              <DrawerTitle>Quick Create</DrawerTitle>
+              <DrawerDescription>Create common items without leaving your current page.</DrawerDescription>
+            </DrawerHeader>
+            <QuickCreateActions className="flex-1 p-4 pt-0" />
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        !quickCreatePinned &&
+        portalTarget &&
+        createPortal(
+          <div
+            data-slot="quick-create-flyout"
+            aria-hidden={!quickCreateOpen}
+            className="fixed top-16 bottom-6 z-[80] w-[22rem] overflow-hidden rounded-lg border bg-background shadow-lg transition-[transform,opacity] duration-300 ease-out"
+            style={
+              {
+                left: (sidebarRightRef.current || sidebarRight || 0) + 16,
+                opacity: quickCreateOpen ? 1 : 0,
+                transform: quickCreateOpen ? "translate3d(0,0,0)" : "translate3d(calc(-100% - 16px),0,0)",
+                pointerEvents: quickCreateOpen ? "auto" : "none",
+              } as React.CSSProperties
+            }
+          >
+            <div className="flex items-start justify-between gap-3 border-b bg-muted/50 p-4">
+              <div className="min-w-0">
+                <h2 className="truncate font-semibold">Quick Create</h2>
+                <p className="text-muted-foreground text-sm">Create common items without leaving your current page.</p>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setQuickCreatePinned(true)}
+                  title="Pin"
+                  className="ring-offset-background focus:ring-ring inline-flex size-8 items-center justify-center rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+                >
+                  <Pin className="size-4" />
+                  <span className="sr-only">Pin</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickCreateOpen(false)}
+                  title="Close"
+                  className="ring-offset-background focus:ring-ring inline-flex size-8 items-center justify-center rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+                >
+                  <span className="sr-only">Close</span>
+                  <XIcon className="size-4" />
+                </button>
+              </div>
+            </div>
+            <QuickCreateActions className="flex-1 p-4" />
+          </div>,
+          portalTarget,
+        )
+      )}
+
       {items.map((group) => (
         <SidebarGroup key={group.id}>
           {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}

@@ -35,6 +35,19 @@ type DrawerContentProps = React.ComponentProps<typeof DrawerPrimitive.Content> &
    * - string -> any valid CSS length (e.g. "32rem")
    */
   sideMaxWidth?: number | string
+  /**
+   * Customize the overlay for specific drawers.
+   */
+  overlayClassName?: string
+  overlayStyle?: React.CSSProperties
+  /**
+   * When true, do not render the overlay (useful for non-modal side panels).
+   */
+  hideOverlay?: boolean
+  /**
+   * Optional actions rendered next to the close button for left/right drawers.
+   */
+  headerActions?: React.ReactNode
 }
 
 function Drawer({
@@ -85,6 +98,10 @@ function DrawerContent({
   sideOffsetY,
   sideWidth,
   sideMaxWidth,
+  overlayClassName,
+  overlayStyle,
+  hideOverlay,
+  headerActions,
   style,
   ...props
 }: DrawerContentProps) {
@@ -126,7 +143,7 @@ function DrawerContent({
 
   return (
     <DrawerPortal data-slot="drawer-portal">
-      <DrawerOverlay />
+      {!hideOverlay && <DrawerOverlay className={overlayClassName} style={overlayStyle} />}
       <DrawerPrimitive.Content
         data-slot="drawer-content"
         // Prevent Vaul's default `::after` background extender from painting outside
@@ -146,16 +163,24 @@ function DrawerContent({
       >
         <div className="bg-muted mx-auto mt-4 hidden h-2 w-[100px] shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
         {children}
-        <DrawerPrimitive.Close
-          data-slot="drawer-close-button"
+        <div
+          data-slot="drawer-header-actions"
           className={cn(
-            "ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 z-10 hidden rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none",
+            "absolute top-4 right-4 z-10 hidden items-center gap-1",
             "group-data-[vaul-drawer-direction=right]/drawer-content:inline-flex group-data-[vaul-drawer-direction=left]/drawer-content:inline-flex"
           )}
         >
-          <XIcon className="size-4" />
-          <span className="sr-only">Close</span>
-        </DrawerPrimitive.Close>
+          {headerActions}
+          <DrawerPrimitive.Close
+            data-slot="drawer-close-button"
+            className={cn(
+              "ring-offset-background focus:ring-ring data-[state=open]:bg-secondary inline-flex size-8 items-center justify-center rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
+            )}
+          >
+            <XIcon className="size-4" />
+            <span className="sr-only">Close</span>
+          </DrawerPrimitive.Close>
+        </div>
       </DrawerPrimitive.Content>
     </DrawerPortal>
   )
