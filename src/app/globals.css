@@ -133,6 +133,11 @@ These serve as the fallback; there is no separate default.css file. */
     @apply bg-background text-foreground;
     font-family: var(--font-sans), system-ui, sans-serif;
   }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 @layer utilities {
