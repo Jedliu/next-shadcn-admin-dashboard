@@ -18,7 +18,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Table as TanStackTable } from "@tanstack/react-table";
-import { GripVertical, Settings2 } from "lucide-react";
+import { GripVertical, ListRestart, Settings2, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -157,19 +157,28 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
                   className="capitalize"
                   checked={column.getIsVisible()}
                   onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                  onSelect={(event) => event.preventDefault()}
                 >
                   {column.id}
                 </DropdownMenuCheckboxItem>
               );
             })}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={handleResetColumns}>Reset columns</DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => {
+              handleResetColumns();
+            }}
+          >
+            <ListRestart className="size-4 text-muted-foreground" />
+            Reset columns
+          </DropdownMenuItem>
           <DropdownMenuItem
             disabled={!canOrderColumns}
             onSelect={() => {
               setOrderDrawerOpen(true);
             }}
           >
+            <SlidersHorizontal className="size-4 text-muted-foreground" />
             Order columns
           </DropdownMenuItem>
         </DropdownMenuContent>
