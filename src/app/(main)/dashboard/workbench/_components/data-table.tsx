@@ -38,13 +38,11 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     protocol?: string[];
     httpVersion?: string[];
     format?: string[];
-    media?: string[];
     status?: string[];
   }>({
     protocol: ["Https"],
     httpVersion: ["HTTP2"],
     format: ["HTML"],
-    media: ["Image"],
     status: ["2xx"],
   });
   const [filtersEnabled, setFiltersEnabled] = React.useState(true);
@@ -193,19 +191,13 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                 { label: "HTML", value: "HTML" },
                 { label: "JS", value: "JS" },
                 { label: "CSS", value: "CSS" },
-              ]}
-              values={activeFilters.format}
-              onChange={(value) => setFilter("format", value)}
-            />
-            <DataTableFacetedFilter
-              title="Media"
-              options={[
                 { label: "Image", value: "Image" },
                 { label: "Media", value: "Media" },
                 { label: "Binary", value: "Binary" },
               ]}
-              values={activeFilters.media}
-              onChange={(value) => setFilter("media", value)}
+              values={activeFilters.format}
+              onChange={(value) => setFilter("format", value)}
+              listClassName="max-h-none overflow-visible"
             />
             <DataTableFacetedFilter
               title="Status"

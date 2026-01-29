@@ -30,18 +30,26 @@ type DataTableFacetedFilterProps = {
   options: FacetedOption[];
   values?: string[];
   onChange: (values?: string[]) => void;
+  listClassName?: string;
 };
 
-export function DataTableFacetedFilter({ title, options, values, onChange }: DataTableFacetedFilterProps) {
+export function DataTableFacetedFilter({
+  title,
+  options,
+  values,
+  onChange,
+  listClassName,
+}: DataTableFacetedFilterProps) {
   const selectedValues = new Set(values ?? []);
+  const hasSelection = selectedValues.size > 0;
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 border-dashed">
+        <Button variant="outline" size="sm" className={cn("h-8", hasSelection ? "border-solid" : "border-dashed")}>
           <PlusCircle />
           {title}
-          {selectedValues.size > 0 && (
+          {hasSelection && (
             <>
               <Separator orientation="vertical" className="mx-2 h-4" />
               <Badge variant="secondary" className="rounded-sm px-1 font-normal lg:hidden">
@@ -69,7 +77,7 @@ export function DataTableFacetedFilter({ title, options, values, onChange }: Dat
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder={title} />
-          <CommandList>
+          <CommandList className={listClassName}>
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
