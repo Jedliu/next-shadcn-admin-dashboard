@@ -51,10 +51,12 @@ type TableCellViewerContextValue = {
   pinned: boolean;
   item: ViewerItem | null;
   panelWidth: number;
+  drafts: Record<number, ViewerItem>;
   setOpen: (open: boolean) => void;
   setPinned: (pinned: boolean) => void;
   setItem: (item: ViewerItem) => void;
   setPanelWidth: React.Dispatch<React.SetStateAction<number>>;
+  setDrafts: React.Dispatch<React.SetStateAction<Record<number, ViewerItem>>>;
 };
 
 const TableCellViewerContext = React.createContext<TableCellViewerContextValue | null>(null);
@@ -72,6 +74,13 @@ export function TableCellViewerProvider({ children }: { readonly children: React
   const [pinned, setPinned] = React.useState(false);
   const [item, setItem] = React.useState<ViewerItem | null>(null);
   const [panelWidth, setPanelWidth] = React.useState(416);
+  const [drafts, setDrafts] = React.useState<Record<number, ViewerItem>>({});
+
+  // Persist input values across pin/unpin: initialize a draft the first time an item is opened.
+  React.useEffect(() => {
+    if (!item) return;
+    setDrafts((prev) => (prev[item.id] ? prev : { ...prev, [item.id]: item }));
+  }, [item]);
 
   const value = React.useMemo(
     () => ({
@@ -79,18 +88,28 @@ export function TableCellViewerProvider({ children }: { readonly children: React
       pinned,
       item,
       panelWidth,
+      drafts,
       setOpen,
       setPinned,
       setItem,
       setPanelWidth,
+      setDrafts,
     }),
-    [item, open, pinned, panelWidth],
+    [drafts, item, open, pinned, panelWidth],
   );
 
   return <TableCellViewerContext.Provider value={value}>{children}</TableCellViewerContext.Provider>;
 }
 
-function TableCellViewerBody({ item, isMobile }: { item: ViewerItem; isMobile: boolean }) {
+function TableCellViewerBody({
+  draft,
+  onChange,
+  isMobile,
+}: {
+  draft: ViewerItem;
+  onChange: (next: ViewerItem) => void;
+  isMobile: boolean;
+}) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 text-sm">
       {!isMobile && (
@@ -148,12 +167,12 @@ function TableCellViewerBody({ item, isMobile }: { item: ViewerItem; isMobile: b
       <form className="flex flex-col gap-4">
         <div className="flex flex-col gap-3">
           <Label htmlFor="header">Header</Label>
-          <Input id="header" defaultValue={item.header} />
+          <Input id="header" value={draft.header} onChange={(e) => onChange({ ...draft, header: e.target.value })} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-3">
             <Label htmlFor="type">Type</Label>
-            <Select defaultValue={item.type}>
+            <Select value={draft.type} onValueChange={(value) => onChange({ ...draft, type: value })}>
               <SelectTrigger id="type" className="w-full">
                 <SelectValue placeholder="Select a type" />
               </SelectTrigger>
@@ -171,7 +190,7 @@ function TableCellViewerBody({ item, isMobile }: { item: ViewerItem; isMobile: b
           </div>
           <div className="flex flex-col gap-3">
             <Label htmlFor="status">Status</Label>
-            <Select defaultValue={item.status}>
+            <Select value={draft.status} onValueChange={(value) => onChange({ ...draft, status: value })}>
               <SelectTrigger id="status" className="w-full">
                 <SelectValue placeholder="Select a status" />
               </SelectTrigger>
@@ -186,16 +205,16 @@ function TableCellViewerBody({ item, isMobile }: { item: ViewerItem; isMobile: b
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-3">
             <Label htmlFor="target">Target</Label>
-            <Input id="target" defaultValue={item.target} />
+            <Input id="target" value={draft.target} onChange={(e) => onChange({ ...draft, target: e.target.value })} />
           </div>
           <div className="flex flex-col gap-3">
             <Label htmlFor="limit">Limit</Label>
-            <Input id="limit" defaultValue={item.limit} />
+            <Input id="limit" value={draft.limit} onChange={(e) => onChange({ ...draft, limit: e.target.value })} />
           </div>
         </div>
         <div className="flex flex-col gap-3">
           <Label htmlFor="reviewer">Reviewer</Label>
-          <Select defaultValue={item.reviewer}>
+          <Select value={draft.reviewer} onValueChange={(value) => onChange({ ...draft, reviewer: value })}>
             <SelectTrigger id="reviewer" className="w-full">
               <SelectValue placeholder="Select a reviewer" />
             </SelectTrigger>
@@ -241,7 +260,7 @@ export function TableCellViewer({ item }: { item: ViewerItem }) {
 
 export function TableCellViewerDrawer() {
   const isMobile = useIsMobile();
-  const { open, pinned, item, panelWidth, setOpen, setPinned, setPanelWidth } = useTableCellViewer();
+  const { open, pinned, item, panelWidth, drafts, setDrafts, setOpen, setPinned, setPanelWidth } = useTableCellViewer();
   const contentRef = React.useRef<HTMLDivElement | null>(null);
   const isResizingRef = React.useRef(false);
   const resizeStartXRef = React.useRef(0);
@@ -377,6 +396,7 @@ export function TableCellViewerDrawer() {
     const width = clampWidth(panelWidth);
     // Slide fully past the viewport edge (account for the anchor inset on the right + a bit extra for shadow).
     const hiddenTranslateX = width + desktopPosition.right + 32;
+    const draft = drafts[item.id] ?? item;
 
     return createPortal(
       <div className="pointer-events-none fixed inset-0 z-40">
@@ -460,7 +480,11 @@ export function TableCellViewerDrawer() {
             </div>
           </div>
 
-          <TableCellViewerBody item={item} isMobile={false} />
+          <TableCellViewerBody
+            draft={draft}
+            onChange={(next) => setDrafts((prev) => ({ ...prev, [item.id]: next }))}
+            isMobile={false}
+          />
           <div className="mt-auto p-4">
             <div className="flex flex-col gap-2">
               <TableCellViewerActions onClose={() => setOpen(false)} />
@@ -473,6 +497,7 @@ export function TableCellViewerDrawer() {
   }
 
   if (!item) return null;
+  const draft = drafts[item.id] ?? item;
 
   return (
     <Drawer
@@ -555,7 +580,11 @@ export function TableCellViewerDrawer() {
           <DrawerTitle>{item.header}</DrawerTitle>
           <DrawerDescription>Showing total visitors for the last 6 months</DrawerDescription>
         </DrawerHeader>
-        <TableCellViewerBody item={item} isMobile={isMobile} />
+        <TableCellViewerBody
+          draft={draft}
+          onChange={(next) => setDrafts((prev) => ({ ...prev, [item.id]: next }))}
+          isMobile={isMobile}
+        />
         <DrawerFooter>
           <TableCellViewerActions onClose={() => setOpen(false)} />
         </DrawerFooter>
@@ -566,7 +595,7 @@ export function TableCellViewerDrawer() {
 
 export function TableCellViewerInset() {
   const isMobile = useIsMobile();
-  const { open, pinned, item, panelWidth, setOpen, setPinned, setPanelWidth } = useTableCellViewer();
+  const { open, pinned, item, panelWidth, drafts, setDrafts, setOpen, setPinned, setPanelWidth } = useTableCellViewer();
   const sectionRef = React.useRef<HTMLElement | null>(null);
   const isResizingRef = React.useRef(false);
   const resizeStartXRef = React.useRef(0);
@@ -582,6 +611,8 @@ export function TableCellViewerInset() {
 
   // Match Quick Create's pinned (inset) behavior: no enter/exit animation.
   if (!item || isMobile || !open || !pinned) return null;
+
+  const draft = drafts[item.id] ?? item;
 
   return (
     <aside
@@ -655,7 +686,11 @@ export function TableCellViewerInset() {
             </button>
           </div>
         </div>
-        <TableCellViewerBody item={item} isMobile={false} />
+        <TableCellViewerBody
+          draft={draft}
+          onChange={(next) => setDrafts((prev) => ({ ...prev, [item.id]: next }))}
+          isMobile={false}
+        />
         <div className="mt-auto p-4">
           <div className="flex flex-col gap-2">
             <TableCellViewerActions onClose={() => setOpen(false)} />
