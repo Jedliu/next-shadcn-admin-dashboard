@@ -279,7 +279,7 @@ export function NavMain({ items }: NavMainProps) {
             }}
           >
             <div
-              className="absolute top-16 bottom-6 w-[22rem] overflow-hidden rounded-lg border bg-background shadow-lg transition-[left,opacity] duration-300 ease-out"
+              className="absolute top-6 bottom-6 w-[22rem] overflow-hidden rounded-lg border bg-background shadow-lg transition-[left,opacity] duration-300 ease-out"
               style={{
                 left: quickCreateOpen
                   ? (sidebarRightRef.current || sidebarRight || 0) + 16
