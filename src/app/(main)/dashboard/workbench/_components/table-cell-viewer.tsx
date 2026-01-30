@@ -339,6 +339,13 @@ export function TableCellViewerDrawer() {
       return;
     }
 
+    // When pinned (inset), the floating panel shouldn't exist.
+    if (pinned) {
+      setVisible(false);
+      setMounted(false);
+      return;
+    }
+
     if (open && !pinned) {
       setMounted(true);
       // Ensure we start from the "hidden" state so the entrance animation is visible.
@@ -573,11 +580,12 @@ export function TableCellViewerInset() {
     return Math.max(min, Math.min(max, Math.round(width)));
   }, []);
 
-  if (!item || !open || !pinned || isMobile) return null;
+  // Match Quick Create's pinned (inset) behavior: no enter/exit animation.
+  if (!item || isMobile || !open || !pinned) return null;
 
   return (
     <aside
-      className="hidden h-full shrink-0 overflow-hidden self-stretch lg:block"
+      className="hidden h-full shrink-0 self-stretch overflow-hidden lg:block"
       style={{ width: `${clampWidth(panelWidth)}px` }}
     >
       <section
