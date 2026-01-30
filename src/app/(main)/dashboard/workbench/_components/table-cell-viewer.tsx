@@ -1,48 +1,22 @@
 import * as React from "react";
 
-import { Pin, PinOff, TrendingUp, XIcon } from "lucide-react";
+import { ExternalLink, Pin, PinOff, RotateCcw, XIcon } from "lucide-react";
 import { createPortal } from "react-dom";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import type { z } from "zod";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 import type { sectionSchema } from "./schema";
-
-const chartData = [
-  { month: "January", desktop: 186, mobile: 80 },
-  { month: "February", desktop: 305, mobile: 200 },
-  { month: "March", desktop: 237, mobile: 120 },
-  { month: "April", desktop: 73, mobile: 190 },
-  { month: "May", desktop: 209, mobile: 130 },
-  { month: "June", desktop: 214, mobile: 140 },
-];
-
-const chartConfig = {
-  desktop: {
-    label: "Desktop",
-    color: "var(--primary)",
-  },
-  mobile: {
-    label: "Mobile",
-    color: "var(--primary)",
-  },
-} satisfies ChartConfig;
 
 type ViewerItem = z.infer<typeof sectionSchema>;
 
@@ -110,134 +84,190 @@ function TableCellViewerBody({
   onChange: (next: ViewerItem) => void;
   isMobile: boolean;
 }) {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 text-sm">
-      {!isMobile && (
-        <>
-          <ChartContainer config={chartConfig}>
-            <AreaChart
-              accessibilityLayer
-              data={chartData}
-              margin={{
-                left: 0,
-                right: 10,
-              }}
-            >
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="month"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tickFormatter={(value) => value.slice(0, 3)}
-                hide
-              />
-              <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-              <Area
-                dataKey="mobile"
-                type="natural"
-                fill="var(--color-mobile)"
-                fillOpacity={0.6}
-                stroke="var(--color-mobile)"
-                stackId="a"
-              />
-              <Area
-                dataKey="desktop"
-                type="natural"
-                fill="var(--color-desktop)"
-                fillOpacity={0.4}
-                stroke="var(--color-desktop)"
-                stackId="a"
-              />
-            </AreaChart>
-          </ChartContainer>
-          <Separator />
-          <div className="grid gap-2">
-            <div className="flex gap-2 font-medium leading-none">
-              Trending up by 5.2% this month <TrendingUp className="size-4" />
-            </div>
-            <div className="text-muted-foreground">
-              Showing total visitors for the last 6 months. This is just some random text to test the layout. It spans
-              multiple lines and should wrap around.
-            </div>
-          </div>
-          <Separator />
-        </>
-      )}
-      <form className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3">
-          <Label htmlFor="header">Header</Label>
-          <Input id="header" value={draft.header} onChange={(e) => onChange({ ...draft, header: e.target.value })} />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="type">Type</Label>
-            <Select value={draft.type} onValueChange={(value) => onChange({ ...draft, type: value })}>
-              <SelectTrigger id="type" className="w-full">
-                <SelectValue placeholder="Select a type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Table of Contents">Table of Contents</SelectItem>
-                <SelectItem value="Executive Summary">Executive Summary</SelectItem>
-                <SelectItem value="Technical Approach">Technical Approach</SelectItem>
-                <SelectItem value="Design">Design</SelectItem>
-                <SelectItem value="Capabilities">Capabilities</SelectItem>
-                <SelectItem value="Focus Documents">Focus Documents</SelectItem>
-                <SelectItem value="Narrative">Narrative</SelectItem>
-                <SelectItem value="Cover Page">Cover Page</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="status">Status</Label>
-            <Select value={draft.status} onValueChange={(value) => onChange({ ...draft, status: value })}>
-              <SelectTrigger id="status" className="w-full">
-                <SelectValue placeholder="Select a status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Done">Done</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Not Started">Not Started</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="target">Target</Label>
-            <Input id="target" value={draft.target} onChange={(e) => onChange({ ...draft, target: e.target.value })} />
-          </div>
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="limit">Limit</Label>
-            <Input id="limit" value={draft.limit} onChange={(e) => onChange({ ...draft, limit: e.target.value })} />
-          </div>
-        </div>
-        <div className="flex flex-col gap-3">
-          <Label htmlFor="reviewer">Reviewer</Label>
-          <Select value={draft.reviewer} onValueChange={(value) => onChange({ ...draft, reviewer: value })}>
-            <SelectTrigger id="reviewer" className="w-full">
-              <SelectValue placeholder="Select a reviewer" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
-              <SelectItem value="Jamik Tashpulatov">Jamik Tashpulatov</SelectItem>
-              <SelectItem value="Emily Whalen">Emily Whalen</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </form>
-    </div>
-  );
-}
+  const [requestTab, setRequestTab] = React.useState("overview");
+  const [responseTab, setResponseTab] = React.useState("raw");
 
-function TableCellViewerActions({ onClose }: { onClose: () => void }) {
+  const defaultUrl = `https://jsonplaceholder.typicode.com/todos/${draft.id}`;
+  const url = draft.target?.trim() ? draft.target : defaultUrl;
+
+  const requestOverview = [
+    { label: "Status", value: "Completed" },
+    { label: "Method", value: "GET" },
+    { label: "Protocol", value: "h2" },
+    { label: "Code", value: "200" },
+    { label: "Host", value: "jsonplaceholder.typicode.com:443" },
+    { label: "Keep Alive", value: "false" },
+    { label: "Content Type", value: "application/json; charset=utf-8" },
+  ];
+
+  const responseHeaders = [
+    "h2 200",
+    "x-ratelimit-remaining: 999",
+    "cf-cache-status: HIT",
+    "access-control-allow-credentials: true",
+    "x-powered-by: Express",
+    "age: 4757",
+    "access-control-allow-origin: *",
+    "pragma: no-cache",
+    "expires: -1",
+    "server: cloudflare",
+    "content-type: application/json; charset=utf-8",
+    "vary: Origin, Accept-Encoding",
+    "cache-control: max-age=43200",
+    "x-content-type-options: nosniff",
+  ];
+
+  const responseBody = '{\n  "userId": 1,\n  "id": 1,\n  "title": "delectus aut autem",\n  "completed": false\n}\n';
+
   return (
-    <>
-      <Button>Submit</Button>
-      <Button variant="outline" onClick={onClose}>
-        Done
-      </Button>
-    </>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <ResizablePanelGroup direction="vertical" className="min-h-0 flex-1">
+        <ResizablePanel defaultSize={55} minSize={20} className="min-h-0">
+          <Tabs value={requestTab} onValueChange={setRequestTab} className="flex h-full min-h-0 flex-col gap-0">
+            <div className="flex items-center justify-between gap-3 border-b bg-muted/40 p-2">
+              <TabsList className="h-9">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="headers">Headers (4)</TabsTrigger>
+                <TabsTrigger value="body">Body</TabsTrigger>
+                <TabsTrigger value="cookies">Cookies (0)</TabsTrigger>
+              </TabsList>
+              <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                GET
+              </Badge>
+            </div>
+
+            <div className="border-b p-2">
+              <div className="flex items-center gap-2">
+                <Label className="text-muted-foreground sr-only" htmlFor="request-url">
+                  URL
+                </Label>
+                <Input
+                  id="request-url"
+                  value={url}
+                  onChange={(e) => onChange({ ...draft, target: e.target.value })}
+                  className={cn("h-9 font-mono text-xs", isMobile && "text-[13px]")}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-9 shrink-0"
+                  title="Open"
+                  onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
+                >
+                  <ExternalLink className="size-4" />
+                  <span className="sr-only">Open</span>
+                </Button>
+                <Button type="button" variant="ghost" size="icon" className="size-9 shrink-0" title="Refresh">
+                  <RotateCcw className="size-4" />
+                  <span className="sr-only">Refresh</span>
+                </Button>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1">
+              <TabsContent value="overview" className="h-full">
+                <ScrollArea className="h-full">
+                  <div className="p-3 text-sm">
+                    <dl className="grid grid-cols-[10rem_1fr] gap-x-6 gap-y-3">
+                      {requestOverview.map((row) => (
+                        <React.Fragment key={row.label}>
+                          <dt className="text-muted-foreground">{row.label}</dt>
+                          <dd className="font-medium text-foreground">{row.value}</dd>
+                        </React.Fragment>
+                      ))}
+                    </dl>
+                    <Separator className="my-3" />
+                    <div className="grid gap-2">
+                      <div className="font-medium">Notes</div>
+                      <div className="text-muted-foreground">
+                        Demo content: use the resize handle to adjust the split view.
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="headers" className="h-full">
+                <ScrollArea className="h-full">
+                  <div className="p-3 font-mono text-xs">
+                    <div className="grid gap-1">
+                      <div>accept: */*</div>
+                      <div>user-agent: Studio Admin</div>
+                      <div>x-request-id: {`req_${draft.id}`}</div>
+                      <div>accept-encoding: gzip</div>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="body" className="h-full">
+                <ScrollArea className="h-full">
+                  <div className="p-3 text-sm">
+                    <div className="text-muted-foreground">No request body for GET.</div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="cookies" className="h-full">
+                <ScrollArea className="h-full">
+                  <div className="p-3 text-sm">
+                    <div className="text-muted-foreground">No cookies.</div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle />
+
+        <ResizablePanel defaultSize={45} minSize={20} className="min-h-0">
+          <Tabs value={responseTab} onValueChange={setResponseTab} className="flex h-full min-h-0 flex-col gap-0">
+            <div className="flex items-center justify-between gap-3 border-b bg-muted/40 p-2">
+              <TabsList className="h-9">
+                <TabsTrigger value="raw">Raw</TabsTrigger>
+                <TabsTrigger value="resp-headers">Headers (26)</TabsTrigger>
+                <TabsTrigger value="resp-body">Body</TabsTrigger>
+                <TabsTrigger value="set-cookie">Set-Cookie (0)</TabsTrigger>
+              </TabsList>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">h2</Badge>
+                <Badge variant="secondary">200</Badge>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1">
+              <TabsContent value="raw" className="h-full">
+                <ScrollArea className="h-full">
+                  <pre className="p-3 font-mono text-xs leading-5 text-foreground">{responseHeaders.join("\n")}</pre>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="resp-headers" className="h-full">
+                <ScrollArea className="h-full">
+                  <pre className="p-3 font-mono text-xs leading-5 text-foreground">{responseHeaders.join("\n")}</pre>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="resp-body" className="h-full">
+                <ScrollArea className="h-full">
+                  <pre className="p-3 font-mono text-xs leading-5 text-foreground">{responseBody}</pre>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="set-cookie" className="h-full">
+                <ScrollArea className="h-full">
+                  <div className="p-3 text-sm">
+                    <div className="text-muted-foreground">No Set-Cookie headers.</div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
   );
 }
 
@@ -453,31 +483,25 @@ export function TableCellViewerDrawer() {
             <div className="absolute inset-y-0 left-0 w-px bg-border" />
           </div>
 
-          <div className="flex items-start justify-between gap-3 border-b bg-muted/50 p-4">
-            <div className="min-w-0">
-              <h2 className="truncate font-semibold">{item.header}</h2>
-              <p className="text-muted-foreground text-sm">Showing total visitors for the last 6 months</p>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setPinned(true)}
-                title="Pin"
-                className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-              >
-                <Pin className="size-4" />
-                <span className="sr-only">Pin</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                title="Close"
-                className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-              >
-                <XIcon className="size-4" />
-                <span className="sr-only">Close</span>
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-1 border-b bg-muted/50 p-2">
+            <button
+              type="button"
+              onClick={() => setPinned(true)}
+              title="Pin"
+              className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+            >
+              <Pin className="size-4" />
+              <span className="sr-only">Pin</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              title="Close"
+              className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+            >
+              <XIcon className="size-4" />
+              <span className="sr-only">Close</span>
+            </button>
           </div>
 
           <TableCellViewerBody
@@ -485,11 +509,6 @@ export function TableCellViewerDrawer() {
             onChange={(next) => setDrafts((prev) => ({ ...prev, [item.id]: next }))}
             isMobile={false}
           />
-          <div className="mt-auto p-4">
-            <div className="flex flex-col gap-2">
-              <TableCellViewerActions onClose={() => setOpen(false)} />
-            </div>
-          </div>
         </div>
       </div>,
       portalTarget,
@@ -576,18 +595,11 @@ export function TableCellViewerDrawer() {
             <div className="absolute inset-y-0 left-0 w-px bg-border" />
           </div>
         )}
-        <DrawerHeader className="gap-1">
-          <DrawerTitle>{item.header}</DrawerTitle>
-          <DrawerDescription>Showing total visitors for the last 6 months</DrawerDescription>
-        </DrawerHeader>
         <TableCellViewerBody
           draft={draft}
           onChange={(next) => setDrafts((prev) => ({ ...prev, [item.id]: next }))}
           isMobile={isMobile}
         />
-        <DrawerFooter>
-          <TableCellViewerActions onClose={() => setOpen(false)} />
-        </DrawerFooter>
       </DrawerContent>
     </Drawer>
   );
@@ -660,42 +672,31 @@ export function TableCellViewerInset() {
         >
           <div className="absolute top-0 bottom-0 left-0 w-px bg-border" />
         </div>
-        <div className="flex items-start justify-between gap-3 border-b bg-muted/50 p-4">
-          <div className="min-w-0">
-            <h2 className="truncate font-semibold">{item.header}</h2>
-            <p className="text-muted-foreground text-sm">Showing total visitors for the last 6 months</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setPinned(false)}
-              title="Unpin"
-              className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <PinOff className="size-4" />
-              <span className="sr-only">Unpin</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              title="Close"
-              className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <XIcon className="size-4" />
-              <span className="sr-only">Close</span>
-            </button>
-          </div>
+        <div className="flex items-center justify-end gap-1 border-b bg-muted/50 p-2">
+          <button
+            type="button"
+            onClick={() => setPinned(false)}
+            title="Unpin"
+            className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          >
+            <PinOff className="size-4" />
+            <span className="sr-only">Unpin</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            title="Close"
+            className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          >
+            <XIcon className="size-4" />
+            <span className="sr-only">Close</span>
+          </button>
         </div>
         <TableCellViewerBody
           draft={draft}
           onChange={(next) => setDrafts((prev) => ({ ...prev, [item.id]: next }))}
           isMobile={false}
         />
-        <div className="mt-auto p-4">
-          <div className="flex flex-col gap-2">
-            <TableCellViewerActions onClose={() => setOpen(false)} />
-          </div>
-        </div>
       </section>
     </aside>
   );
