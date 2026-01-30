@@ -182,8 +182,6 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
               Order columns
             </DropdownMenuSubTrigger>
             <DropdownMenuPrimitive.SubContent
-              side="left"
-              align="center"
               sideOffset={8}
               className={cn(
                 "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-50 w-52 max-h-[calc(100svh-2rem)] overflow-hidden rounded-md border shadow-lg",

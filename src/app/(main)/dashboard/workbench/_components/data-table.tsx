@@ -22,6 +22,7 @@ import { DataTableViewOptions } from "../../../../../components/data-table/data-
 import { withDndColumn } from "../../../../../components/data-table/table-utils";
 import { dashboardColumns } from "./columns";
 import type { sectionSchema } from "./schema";
+import { TableCellViewerDrawer, TableCellViewerInset, TableCellViewerProvider } from "./table-cell-viewer";
 
 export function DataTable({ data: initialData }: { data: z.infer<typeof sectionSchema>[] }) {
   const [data, setData] = React.useState(() => initialData);
@@ -83,18 +84,24 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     switch (value) {
       case "outline":
         return (
-          <>
-            <div className="relative overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:border-border before:border-b before:bg-muted">
-              <DataTableNew
-                dndEnabled
-                table={table}
-                columns={columns}
-                onReorder={setData}
-                className="relative z-10 w-auto [&_thead_tr]:border-transparent"
-              />
+          <div
+            data-slot="table-cell-viewer-anchor"
+            className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:items-stretch"
+          >
+            <div className="flex min-w-0 flex-1 flex-col gap-4">
+              <div className="relative overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:border-border before:border-b before:bg-muted">
+                <DataTableNew
+                  dndEnabled
+                  table={table}
+                  columns={columns}
+                  onReorder={setData}
+                  className="relative z-10 w-auto [&_thead_tr]:border-transparent"
+                />
+              </div>
+              <DataTablePagination table={table} />
             </div>
-            <DataTablePagination table={table} />
-          </>
+            <TableCellViewerInset />
+          </div>
         );
       case "past-performance":
       case "key-personnel":
@@ -106,152 +113,163 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
   };
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-col justify-start gap-2">
-      <div className="flex items-center justify-between">
-        <Label htmlFor="view-selector" className="sr-only">
-          View
-        </Label>
-        <Select value={activeTab} onValueChange={setActiveTab}>
-          <SelectTrigger className="flex @4xl/main:hidden w-fit" size="sm" id="view-selector">
-            <SelectValue placeholder="Select a view" />
-          </SelectTrigger>
-          <SelectContent>
-            {tabs.map((tab) => (
-              <SelectItem key={tab.value} value={tab.value}>
-                {tab.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <TabsList
-          variant="line"
-          className="@4xl/main:flex hidden w-full justify-start **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:px-1"
+    <TableCellViewerProvider>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex min-h-0 w-full flex-1 flex-col justify-start gap-2"
         >
-          {tabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
-              <span>{tab.label}</span>
-              {tab.badge ? <Badge variant="secondary">{tab.badge}</Badge> : null}
-              <button
-                type="button"
-                className="text-muted-foreground hover:text-foreground inline-flex size-5 cursor-pointer items-center justify-center rounded-sm opacity-70 transition-opacity hover:opacity-100"
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleRemoveTab(tab.value);
-                }}
-                aria-label={`Remove ${tab.label}`}
-                disabled={tabs.length <= 1}
-              >
-                <XIcon className="size-3.5" />
-              </button>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </div>
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex min-w-0 flex-1 items-center overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex flex-nowrap items-center gap-2">
-            <FieldLabel htmlFor="filters-enabled" className="!w-fit">
-              <Field
-                orientation="horizontal"
-                className="gap-1.5 overflow-hidden !px-3 !py-1.5 transition-all duration-100 ease-linear group-has-data-[state=checked]/field-label:!px-2"
-              >
-                <Checkbox
-                  id="filters-enabled"
-                  checked={showFiltered}
-                  onCheckedChange={() => {
-                    if (!hasAnyFilters) return;
-                    setFiltersEnabled((prev) => !prev);
-                  }}
-                  className="-ml-6 -translate-x-1 rounded-full transition-all duration-100 ease-linear data-[state=checked]:ml-0 data-[state=checked]:translate-x-0"
-                />
-                <FieldTitle>{showFiltered ? "Filtered" : "All"}</FieldTitle>
-              </Field>
-            </FieldLabel>
-            <div className="h-6 w-px bg-border" />
-            <DataTableFacetedFilter
-              title="Protocol"
-              options={[
-                { label: "Http", value: "Http" },
-                { label: "Https", value: "Https" },
-                { label: "Websocket", value: "Websocket" },
-              ]}
-              values={activeFilters.protocol}
-              onChange={(value) => setFilter("protocol", value)}
-            />
-            <DataTableFacetedFilter
-              title="HTTP Version"
-              options={[
-                { label: "HTTP1", value: "HTTP1" },
-                { label: "HTTP2", value: "HTTP2" },
-              ]}
-              values={activeFilters.httpVersion}
-              onChange={(value) => setFilter("httpVersion", value)}
-            />
-            <DataTableFacetedFilter
-              title="Format"
-              options={[
-                { label: "JSON", value: "JSON" },
-                { label: "XML", value: "XML" },
-                { label: "Text", value: "Text" },
-                { label: "HTML", value: "HTML" },
-                { label: "JS", value: "JS" },
-                { label: "CSS", value: "CSS" },
-                { label: "Image", value: "Image" },
-                { label: "Media", value: "Media" },
-                { label: "Binary", value: "Binary" },
-              ]}
-              values={activeFilters.format}
-              onChange={(value) => setFilter("format", value)}
-              listClassName="max-h-none overflow-visible"
-            />
-            <DataTableFacetedFilter
-              title="Status"
-              options={[
-                { label: "1xx", value: "1xx" },
-                { label: "2xx", value: "2xx" },
-                { label: "3xx", value: "3xx" },
-                { label: "4xx", value: "4xx" },
-                { label: "5xx", value: "5xx" },
-              ]}
-              values={activeFilters.status}
-              onChange={(value) => setFilter("status", value)}
-            />
-            {hasAnyFilters ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveFilters({});
-                  setFiltersEnabled(false);
-                }}
-                className="text-sm font-medium text-foreground hover:text-foreground/80 inline-flex items-center gap-2 px-3 py-1.5"
-              >
-                Reset
-                <XIcon className="size-4" />
-              </button>
-            ) : null}
+          <div className="flex items-center justify-between">
+            <Label htmlFor="view-selector" className="sr-only">
+              View
+            </Label>
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="flex @4xl/main:hidden w-fit" size="sm" id="view-selector">
+                <SelectValue placeholder="Select a view" />
+              </SelectTrigger>
+              <SelectContent>
+                {tabs.map((tab) => (
+                  <SelectItem key={tab.value} value={tab.value}>
+                    {tab.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <TabsList
+              variant="line"
+              className="@4xl/main:flex hidden w-full justify-start **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:px-1"
+            >
+              {tabs.map((tab) => (
+                <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
+                  <span>{tab.label}</span>
+                  {tab.badge ? <Badge variant="secondary">{tab.badge}</Badge> : null}
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground inline-flex size-5 cursor-pointer items-center justify-center rounded-sm opacity-70 transition-opacity hover:opacity-100"
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleRemoveTab(tab.value);
+                    }}
+                    aria-label={`Remove ${tab.label}`}
+                    disabled={tabs.length <= 1}
+                  >
+                    <XIcon className="size-3.5" />
+                  </button>
+                </TabsTrigger>
+              ))}
+            </TabsList>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <DataTableViewOptions table={table} />
-          <Button variant="outline" size="sm">
-            <SlidersHorizontal />
-            <span className="hidden lg:inline">Filters</span>
-          </Button>
-        </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex min-w-0 flex-1 items-center overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex flex-nowrap items-center gap-2">
+                <FieldLabel htmlFor="filters-enabled" className="!w-fit">
+                  <Field
+                    orientation="horizontal"
+                    className="gap-1.5 overflow-hidden !px-3 !py-1.5 transition-all duration-100 ease-linear group-has-data-[state=checked]/field-label:!px-2"
+                  >
+                    <Checkbox
+                      id="filters-enabled"
+                      checked={showFiltered}
+                      onCheckedChange={() => {
+                        if (!hasAnyFilters) return;
+                        setFiltersEnabled((prev) => !prev);
+                      }}
+                      className="-ml-6 -translate-x-1 rounded-full transition-all duration-100 ease-linear data-[state=checked]:ml-0 data-[state=checked]:translate-x-0"
+                    />
+                    <FieldTitle>{showFiltered ? "Filtered" : "All"}</FieldTitle>
+                  </Field>
+                </FieldLabel>
+                <div className="h-6 w-px bg-border" />
+                <DataTableFacetedFilter
+                  title="Protocol"
+                  options={[
+                    { label: "Http", value: "Http" },
+                    { label: "Https", value: "Https" },
+                    { label: "Websocket", value: "Websocket" },
+                  ]}
+                  values={activeFilters.protocol}
+                  onChange={(value) => setFilter("protocol", value)}
+                />
+                <DataTableFacetedFilter
+                  title="HTTP Version"
+                  options={[
+                    { label: "HTTP1", value: "HTTP1" },
+                    { label: "HTTP2", value: "HTTP2" },
+                  ]}
+                  values={activeFilters.httpVersion}
+                  onChange={(value) => setFilter("httpVersion", value)}
+                />
+                <DataTableFacetedFilter
+                  title="Format"
+                  options={[
+                    { label: "JSON", value: "JSON" },
+                    { label: "XML", value: "XML" },
+                    { label: "Text", value: "Text" },
+                    { label: "HTML", value: "HTML" },
+                    { label: "JS", value: "JS" },
+                    { label: "CSS", value: "CSS" },
+                    { label: "Image", value: "Image" },
+                    { label: "Media", value: "Media" },
+                    { label: "Binary", value: "Binary" },
+                  ]}
+                  values={activeFilters.format}
+                  onChange={(value) => setFilter("format", value)}
+                  listClassName="max-h-none overflow-visible"
+                />
+                <DataTableFacetedFilter
+                  title="Status"
+                  options={[
+                    { label: "1xx", value: "1xx" },
+                    { label: "2xx", value: "2xx" },
+                    { label: "3xx", value: "3xx" },
+                    { label: "4xx", value: "4xx" },
+                    { label: "5xx", value: "5xx" },
+                  ]}
+                  values={activeFilters.status}
+                  onChange={(value) => setFilter("status", value)}
+                />
+                {hasAnyFilters ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveFilters({});
+                      setFiltersEnabled(false);
+                    }}
+                    className="text-sm font-medium text-foreground hover:text-foreground/80 inline-flex items-center gap-2 px-3 py-1.5"
+                  >
+                    Reset
+                    <XIcon className="size-4" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <DataTableViewOptions table={table} />
+              <Button variant="outline" size="sm">
+                <SlidersHorizontal />
+                <span className="hidden lg:inline">Filters</span>
+              </Button>
+            </div>
+          </div>
+          {tabs.map((tab) => (
+            <TabsContent
+              key={tab.value}
+              value={tab.value}
+              className={
+                tab.value === "outline" ? "relative flex min-h-0 flex-1 flex-col gap-4 overflow-auto" : "flex flex-col"
+              }
+            >
+              {renderTabContent(tab.value)}
+            </TabsContent>
+          ))}
+        </Tabs>
+        <TableCellViewerDrawer />
       </div>
-      {tabs.map((tab) => (
-        <TabsContent
-          key={tab.value}
-          value={tab.value}
-          className={tab.value === "outline" ? "relative flex flex-col gap-4 overflow-auto" : "flex flex-col"}
-        >
-          {renderTabContent(tab.value)}
-        </TabsContent>
-      ))}
-    </Tabs>
+    </TableCellViewerProvider>
   );
 }
