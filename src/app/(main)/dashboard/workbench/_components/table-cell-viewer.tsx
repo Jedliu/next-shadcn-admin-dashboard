@@ -367,6 +367,10 @@ export function TableCellViewerDrawer() {
   if (!isMobile) {
     if (!item || !portalTarget || !mounted || !desktopPosition) return null;
 
+    const width = clampWidth(panelWidth);
+    // Slide fully past the viewport edge (account for the anchor inset on the right + a bit extra for shadow).
+    const hiddenTranslateX = width + desktopPosition.right + 32;
+
     return createPortal(
       <div className="pointer-events-none fixed inset-0 z-40">
         <div
@@ -375,13 +379,13 @@ export function TableCellViewerDrawer() {
             "pointer-events-auto absolute flex flex-col overflow-hidden rounded-lg border bg-background shadow-lg",
             // Match Vaul's right drawer slide timing/curve (0.5s cubic-bezier(0.32, 0.72, 0, 1)).
             "transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
-            visible ? "translate-x-0" : "translate-x-full",
           )}
           style={{
             top: `${desktopPosition.top}px`,
             right: `${desktopPosition.right}px`,
             bottom: `${desktopPosition.bottom}px`,
-            width: `${clampWidth(panelWidth)}px`,
+            width: `${width}px`,
+            transform: visible ? "translate3d(0,0,0)" : `translate3d(${hiddenTranslateX}px,0,0)`,
           }}
         >
           <div
