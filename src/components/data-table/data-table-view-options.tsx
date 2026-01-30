@@ -19,9 +19,9 @@ import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } 
 import { CSS } from "@dnd-kit/utilities";
 import type { Table as TanStackTable } from "@tanstack/react-table";
 import { GripVertical, ListRestart, Settings2, SlidersHorizontal } from "lucide-react";
+import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
 import { Button } from "@/components/ui/button";
-import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -29,10 +29,11 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 interface DataTableViewOptionsProps<TData> {
@@ -72,8 +73,7 @@ function ColumnOrderRow({ id, label }: { id: string; label: React.ReactNode }) {
 }
 
 export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps<TData>) {
-  const isMobile = useIsMobile();
-  const [orderDrawerOpen, setOrderDrawerOpen] = React.useState(false);
+  const [orderMenuOpen, setOrderMenuOpen] = React.useState(false);
   const [columnIds, setColumnIds] = React.useState<string[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
 
@@ -86,9 +86,9 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
   );
 
   React.useEffect(() => {
-    if (!orderDrawerOpen || isDragging) return;
+    if (!orderMenuOpen || isDragging) return;
     setColumnIds(getReorderableVisibleColumns().map((c) => c.id));
-  }, [orderDrawerOpen, isDragging, getReorderableVisibleColumns]);
+  }, [orderMenuOpen, isDragging, getReorderableVisibleColumns]);
 
   const sensors = useSensors(useSensor(MouseSensor, {}), useSensor(TouchSensor, {}), useSensor(KeyboardSensor, {}));
   const sortableId = React.useId();
@@ -137,14 +137,18 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu
+        onOpenChange={(open) => {
+          if (!open) setOrderMenuOpen(false);
+        }}
+      >
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="ml-auto hidden h-8 lg:flex">
             <Settings2 />
             View
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[150px]">
+        <DropdownMenuContent align="end" className="w-[200px]">
           <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {table
@@ -172,63 +176,52 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
             <ListRestart className="size-4 text-muted-foreground" />
             Reset columns
           </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={!canOrderColumns}
-            onSelect={() => {
-              setOrderDrawerOpen(true);
-            }}
-          >
-            <SlidersHorizontal className="size-4 text-muted-foreground" />
-            Order columns
-          </DropdownMenuItem>
+          <DropdownMenuSub open={orderMenuOpen} onOpenChange={setOrderMenuOpen}>
+            <DropdownMenuSubTrigger disabled={!canOrderColumns}>
+              <SlidersHorizontal className="size-4 text-muted-foreground" />
+              Order columns
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPrimitive.SubContent
+              side="left"
+              align="center"
+              sideOffset={8}
+              className={cn(
+                "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-50 w-52 max-h-[calc(100svh-2rem)] overflow-hidden rounded-md border shadow-lg",
+              )}
+            >
+              <div className="border-b px-4 py-3">
+                <div className="text-sm font-medium">Drag to order</div>
+              </div>
+              <div className="flex min-h-0 flex-col gap-2 overflow-y-auto px-4 py-3 text-sm">
+                {columnIds.length === 0 ? (
+                  <div className="text-muted-foreground">No reorderable columns.</div>
+                ) : (
+                  <DndContext
+                    collisionDetection={closestCenter}
+                    modifiers={[restrictToVerticalAxis]}
+                    onDragOver={handleDragOver}
+                    onDragStart={() => setIsDragging(true)}
+                    onDragEnd={handleDragEnd}
+                    onDragCancel={() => setIsDragging(false)}
+                    sensors={sensors}
+                    id={sortableId}
+                  >
+                    <Table className="table-fixed">
+                      <TableBody className="[&_tr]:border-border">
+                        <SortableContext items={columnIds} strategy={verticalListSortingStrategy}>
+                          {columnIds.map((id) => (
+                            <ColumnOrderRow key={id} id={id} label={id} />
+                          ))}
+                        </SortableContext>
+                      </TableBody>
+                    </Table>
+                  </DndContext>
+                )}
+              </div>
+            </DropdownMenuPrimitive.SubContent>
+          </DropdownMenuSub>
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <Drawer open={orderDrawerOpen} onOpenChange={setOrderDrawerOpen} direction={isMobile ? "bottom" : "right"}>
-        <DrawerContent
-          sideWidth="20rem"
-          sideMaxWidth="20rem"
-          // This drawer is intentionally shorter and vertically centered (desktop) to avoid a large empty area.
-          sideOffsetY="clamp(1rem, 3svh, 3rem)"
-          className={cn(
-            isMobile
-              ? "max-h-[80vh]"
-              : "overflow-hidden data-[vaul-drawer-direction=right]:my-auto data-[vaul-drawer-direction=right]:h-fit data-[vaul-drawer-direction=right]:max-h-[calc(100svh-var(--drawer-side-offset-y)-var(--drawer-side-offset-y))]",
-          )}
-        >
-          <DrawerHeader className="gap-1">
-            <DrawerTitle>Order columns</DrawerTitle>
-            <DrawerDescription>Drag to reorder visible columns.</DrawerDescription>
-          </DrawerHeader>
-
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pb-4 text-sm">
-            {columnIds.length === 0 ? (
-              <div className="text-muted-foreground">No reorderable columns.</div>
-            ) : (
-              <DndContext
-                collisionDetection={closestCenter}
-                modifiers={[restrictToVerticalAxis]}
-                onDragOver={handleDragOver}
-                onDragStart={() => setIsDragging(true)}
-                onDragEnd={handleDragEnd}
-                onDragCancel={() => setIsDragging(false)}
-                sensors={sensors}
-                id={sortableId}
-              >
-                <Table className="table-fixed">
-                  <TableBody className="[&_tr]:border-border">
-                    <SortableContext items={columnIds} strategy={verticalListSortingStrategy}>
-                      {columnIds.map((id) => (
-                        <ColumnOrderRow key={id} id={id} label={id} />
-                      ))}
-                    </SortableContext>
-                  </TableBody>
-                </Table>
-              </DndContext>
-            )}
-          </div>
-        </DrawerContent>
-      </Drawer>
     </>
   );
 }

@@ -46,7 +46,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     status: ["2xx"],
   });
   const [filtersEnabled, setFiltersEnabled] = React.useState(true);
-
   const setFilter = React.useCallback((group: keyof typeof activeFilters, values?: string[]) => {
     setActiveFilters((prev) => ({ ...prev, [group]: values }));
     setFiltersEnabled(true);
@@ -54,6 +53,13 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
 
   const totalSelectedFilters = Object.values(activeFilters).reduce((count, values) => count + (values?.length ?? 0), 0);
   const hasAnyFilters = totalSelectedFilters > 0;
+  const showFiltered = hasAnyFilters && filtersEnabled;
+
+  React.useEffect(() => {
+    if (!hasAnyFilters && filtersEnabled) {
+      setFiltersEnabled(false);
+    }
+  }, [filtersEnabled, hasAnyFilters]);
 
   const handleRemoveTab = React.useCallback(
     (value: string) => {
@@ -155,11 +161,14 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
               >
                 <Checkbox
                   id="filters-enabled"
-                  checked={filtersEnabled}
-                  onCheckedChange={(checked) => setFiltersEnabled(!!checked)}
+                  checked={showFiltered}
+                  onCheckedChange={() => {
+                    if (!hasAnyFilters) return;
+                    setFiltersEnabled((prev) => !prev);
+                  }}
                   className="-ml-6 -translate-x-1 rounded-full transition-all duration-100 ease-linear data-[state=checked]:ml-0 data-[state=checked]:translate-x-0"
                 />
-                <FieldTitle>{hasAnyFilters ? "Filtered" : "All"}</FieldTitle>
+                <FieldTitle>{showFiltered ? "Filtered" : "All"}</FieldTitle>
               </Field>
             </FieldLabel>
             <div className="h-6 w-px bg-border" />

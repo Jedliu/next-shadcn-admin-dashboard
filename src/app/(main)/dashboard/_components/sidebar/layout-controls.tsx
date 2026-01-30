@@ -1,11 +1,9 @@
 "use client";
 
-import { Settings } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { type FontKey, fontOptions } from "@/lib/fonts/registry";
 import type { ContentLayout, NavbarStyle, SidebarCollapsible, SidebarVariant } from "@/lib/preferences/layout";
@@ -20,6 +18,7 @@ import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
 import { persistPreference } from "@/lib/preferences/preferences-storage";
 import { THEME_PRESET_OPTIONS, type ThemeMode, type ThemePreset } from "@/lib/preferences/theme";
 import { applyThemePreset } from "@/lib/preferences/theme-utils";
+import { cn } from "@/lib/utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 export function LayoutControls() {
@@ -97,163 +96,190 @@ export function LayoutControls() {
   };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button size="icon">
-          <Settings />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end">
-        <div className="flex flex-col gap-5">
-          <div className="space-y-1.5">
-            <h4 className="font-medium text-sm leading-none">Preferences</h4>
-            <p className="text-muted-foreground text-xs">Customize your dashboard layout preferences.</p>
-            <p className="font-medium text-muted-foreground text-xs">
-              *Preferences use cookies by default. You can switch between cookies, localStorage, or no storage in code.
-            </p>
-          </div>
-          <div className="space-y-3 **:data-[slot=toggle-group]:w-full **:data-[slot=toggle-group-item]:flex-1 **:data-[slot=toggle-group-item]:text-xs">
-            <div className="space-y-1">
-              <Label className="font-medium text-xs">Theme Preset</Label>
-              <Select value={themePreset} onValueChange={onThemePresetChange}>
-                <SelectTrigger size="sm" className="w-full text-xs">
-                  <SelectValue placeholder="Preset" />
-                </SelectTrigger>
-                <SelectContent>
-                  {THEME_PRESET_OPTIONS.map((preset) => (
-                    <SelectItem key={preset.value} className="text-xs" value={preset.value}>
-                      <span
-                        className="size-2.5 rounded-full"
-                        style={{
-                          backgroundColor:
-                            (resolvedThemeMode ?? "light") === "dark" ? preset.primary.dark : preset.primary.light,
-                        }}
+    <div className="flex flex-col gap-6">
+      <div className="space-y-1">
+        <h2 className="text-base font-semibold">Appearance</h2>
+        <p className="text-sm text-muted-foreground">
+          Customize the appearance of the app. Automatically switch between day and night themes.
+        </p>
+      </div>
+      <Separator />
+      <div className="space-y-6 **:data-[slot=toggle-group]:w-full **:data-[slot=toggle-group-item]:flex-1 **:data-[slot=toggle-group-item]:text-xs">
+        <div className="space-y-2">
+          <Label className="text-xs font-medium">Font</Label>
+          <Select value={font} onValueChange={onFontChange}>
+            <SelectTrigger size="sm" className="w-full text-xs">
+              <SelectValue placeholder="Select font" />
+            </SelectTrigger>
+            <SelectContent>
+              {fontOptions.map((font) => (
+                <SelectItem key={font.key} className="text-xs" value={font.key}>
+                  {font.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Set the font you want to use in the dashboard.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-medium">Theme Preset</Label>
+          <Select value={themePreset} onValueChange={onThemePresetChange}>
+            <SelectTrigger size="sm" className="w-full text-xs">
+              <SelectValue placeholder="Preset" />
+            </SelectTrigger>
+            <SelectContent>
+              {THEME_PRESET_OPTIONS.map((preset) => (
+                <SelectItem key={preset.value} className="text-xs" value={preset.value}>
+                  <span
+                    className="size-2.5 rounded-full"
+                    style={{
+                      backgroundColor:
+                        (resolvedThemeMode ?? "light") === "dark" ? preset.primary.dark : preset.primary.light,
+                    }}
+                  />
+                  {preset.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Select the color preset for the dashboard.</p>
+        </div>
+
+        <div className="space-y-3">
+          <Label className="text-xs font-medium">Theme</Label>
+          <p className="text-xs text-muted-foreground">Select the theme for the dashboard.</p>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {[
+              { value: "light", label: "Light" },
+              { value: "dark", label: "Dark" },
+              { value: "system", label: "System" },
+            ].map((mode) => {
+              const isActive = themeMode === mode.value;
+              return (
+                <button
+                  key={mode.value}
+                  type="button"
+                  onClick={() => onThemeModeChange(mode.value as ThemeMode)}
+                  className={cn(
+                    "group flex w-full items-center gap-3 rounded-md border p-3 text-left text-sm transition",
+                    "hover:bg-muted/40",
+                    isActive ? "border-foreground/50 ring-2 ring-foreground/10" : "border-border",
+                  )}
+                  aria-pressed={isActive}
+                >
+                  <div
+                    className={cn(
+                      "flex h-20 w-24 flex-col gap-2 rounded-md border p-2",
+                      mode.value === "dark" ? "bg-zinc-950 border-zinc-800" : "bg-white border-zinc-200",
+                    )}
+                  >
+                    <div className={cn("h-4 rounded-full", mode.value === "dark" ? "bg-slate-700" : "bg-zinc-200")} />
+                    <div
+                      className={cn("h-4 rounded-full", mode.value === "dark" ? "bg-slate-700/80" : "bg-zinc-200/80")}
+                    />
+                    <div className="mt-auto flex items-center gap-2">
+                      <div
+                        className={cn("size-4 rounded-full", mode.value === "dark" ? "bg-slate-600" : "bg-zinc-200")}
                       />
-                      {preset.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="font-medium text-xs">Fonts</Label>
-              <Select value={font} onValueChange={onFontChange}>
-                <SelectTrigger size="sm" className="w-full text-xs">
-                  <SelectValue placeholder="Select font" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fontOptions.map((font) => (
-                    <SelectItem key={font.key} className="text-xs" value={font.key}>
-                      {font.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="font-medium text-xs">Theme Mode</Label>
-              <ToggleGroup
-                size="sm"
-                variant="outline"
-                type="single"
-                value={themeMode}
-                onValueChange={onThemeModeChange}
-              >
-                <ToggleGroupItem value="light" aria-label="Toggle light">
-                  Light
-                </ToggleGroupItem>
-                <ToggleGroupItem value="dark" aria-label="Toggle dark">
-                  Dark
-                </ToggleGroupItem>
-                <ToggleGroupItem value="system" aria-label="Toggle system">
-                  System
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="font-medium text-xs">Page Layout</Label>
-              <ToggleGroup
-                size="sm"
-                variant="outline"
-                type="single"
-                value={contentLayout}
-                onValueChange={onContentLayoutChange}
-              >
-                <ToggleGroupItem value="centered" aria-label="Toggle centered">
-                  Centered
-                </ToggleGroupItem>
-                <ToggleGroupItem value="full-width" aria-label="Toggle full-width">
-                  Full Width
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="font-medium text-xs">Navbar Behavior</Label>
-              <ToggleGroup
-                size="sm"
-                variant="outline"
-                type="single"
-                value={navbarStyle}
-                onValueChange={onNavbarStyleChange}
-              >
-                <ToggleGroupItem value="sticky" aria-label="Toggle sticky">
-                  Sticky
-                </ToggleGroupItem>
-                <ToggleGroupItem value="scroll" aria-label="Toggle scroll">
-                  Scroll
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="font-medium text-xs">Sidebar Style</Label>
-              <ToggleGroup
-                size="sm"
-                variant="outline"
-                type="single"
-                value={variant}
-                onValueChange={onSidebarStyleChange}
-              >
-                <ToggleGroupItem value="inset" aria-label="Toggle inset">
-                  Inset
-                </ToggleGroupItem>
-                <ToggleGroupItem value="sidebar" aria-label="Toggle sidebar">
-                  Sidebar
-                </ToggleGroupItem>
-                <ToggleGroupItem value="floating" aria-label="Toggle floating">
-                  Floating
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="font-medium text-xs">Sidebar Collapse Mode</Label>
-              <ToggleGroup
-                size="sm"
-                variant="outline"
-                type="single"
-                value={collapsible}
-                onValueChange={onSidebarCollapseModeChange}
-              >
-                <ToggleGroupItem value="icon" aria-label="Toggle icon">
-                  Icon
-                </ToggleGroupItem>
-                <ToggleGroupItem value="offcanvas" aria-label="Toggle offcanvas">
-                  OffCanvas
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-
-            <Button type="button" size="sm" variant="outline" className="w-full" onClick={handleRestore}>
-              Restore Defaults
-            </Button>
+                      <div
+                        className={cn(
+                          "h-3 flex-1 rounded-full",
+                          mode.value === "dark" ? "bg-slate-700/80" : "bg-zinc-200/80",
+                        )}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{mode.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {mode.value === "system" ? "Match your OS settings." : `Use ${mode.label.toLowerCase()} theme.`}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
-      </PopoverContent>
-    </Popover>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-medium">Page Layout</Label>
+          <ToggleGroup
+            size="sm"
+            variant="outline"
+            type="single"
+            value={contentLayout}
+            onValueChange={onContentLayoutChange}
+          >
+            <ToggleGroupItem value="centered" aria-label="Toggle centered">
+              Centered
+            </ToggleGroupItem>
+            <ToggleGroupItem value="full-width" aria-label="Toggle full-width">
+              Full Width
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-medium">Navbar Behavior</Label>
+          <ToggleGroup
+            size="sm"
+            variant="outline"
+            type="single"
+            value={navbarStyle}
+            onValueChange={onNavbarStyleChange}
+          >
+            <ToggleGroupItem value="sticky" aria-label="Toggle sticky">
+              Sticky
+            </ToggleGroupItem>
+            <ToggleGroupItem value="scroll" aria-label="Toggle scroll">
+              Scroll
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-medium">Sidebar Style</Label>
+          <ToggleGroup size="sm" variant="outline" type="single" value={variant} onValueChange={onSidebarStyleChange}>
+            <ToggleGroupItem value="inset" aria-label="Toggle inset">
+              Inset
+            </ToggleGroupItem>
+            <ToggleGroupItem value="sidebar" aria-label="Toggle sidebar">
+              Sidebar
+            </ToggleGroupItem>
+            <ToggleGroupItem value="floating" aria-label="Toggle floating">
+              Floating
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-medium">Sidebar Collapse Mode</Label>
+          <ToggleGroup
+            size="sm"
+            variant="outline"
+            type="single"
+            value={collapsible}
+            onValueChange={onSidebarCollapseModeChange}
+          >
+            <ToggleGroupItem value="icon" aria-label="Toggle icon">
+              Icon
+            </ToggleGroupItem>
+            <ToggleGroupItem value="offcanvas" aria-label="Toggle offcanvas">
+              OffCanvas
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="button" size="sm">
+            Update settings
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={handleRestore}>
+            Restore Defaults
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
