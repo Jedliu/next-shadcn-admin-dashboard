@@ -45,6 +45,9 @@ type FilterCondition = {
 
 type FilterGroup = {
   id: string;
+  // Relationship between conditions inside this group.
+  conditionsJoin: FilterGroupJoin;
+  // Relationship between groups (kept consistent across all groups for now).
   join: FilterGroupJoin;
   conditions: FilterCondition[];
 };
@@ -109,8 +112,8 @@ function createEmptyCondition(): FilterCondition {
   return { id: newId("cond"), field: null, operator: "in", values: [] };
 }
 
-function createEmptyGroup(): FilterGroup {
-  return { id: newId("group"), join: "all", conditions: [createEmptyCondition()] };
+function createEmptyGroup(join: FilterGroupJoin = "all"): FilterGroup {
+  return { id: newId("group"), join, conditionsJoin: "all", conditions: [createEmptyCondition()] };
 }
 
 function deriveFacetFilters(groups: FilterGroup[]): FacetFilters {
@@ -156,9 +159,8 @@ function ValuesPicker({
           variant="outline"
           size="sm"
           disabled={disabled}
-          className="h-8 min-w-48 justify-start gap-2 px-2 text-left font-normal"
+          className="h-8 min-w-0 flex-1 justify-start gap-2 px-2 text-left font-normal"
         >
-          <span className="text-muted-foreground text-xs">Values</span>
           <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
             {values.length === 0 ? <span className="text-muted-foreground">Select…</span> : values.join(", ")}
           </span>
@@ -210,13 +212,293 @@ function FiltersBuilder({
   onClearAll: () => void;
   onChange: (next: FilterGroup[]) => void;
 }) {
+  const groupMatchMode = groups[0]?.join ?? "all";
+  const showGroupConnector = groups.length > 1;
+
   return (
-    <div className="w-[44rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg">
+    <div className="flex max-h-[calc(var(--radix-popover-content-available-height)-0.75rem)] w-[44rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg">
       <div className="flex items-center justify-between gap-4 border-b bg-muted/40 px-3 py-2">
         <div className="flex items-center gap-2">
           <div className="text-sm font-medium">Filters</div>
           {totalActiveConditions > 0 ? <Badge variant="secondary">{totalActiveConditions}</Badge> : null}
         </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <div className="relative">
+          {showGroupConnector ? (
+            <>
+              <div className="absolute top-0 bottom-0 left-8 w-px bg-border" />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="absolute left-8 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                onClick={() =>
+                  onChange(
+                    groups.map((g) => ({
+                      ...g,
+                      join: groupMatchMode === "all" ? ("any" as const) : ("all" as const),
+                    })),
+                  )
+                }
+                title="Toggle group relationship"
+              >
+                {groupMatchMode === "all" ? "AND" : "OR"}
+              </Button>
+            </>
+          ) : null}
+
+          <div className={showGroupConnector ? "space-y-1.5 pl-16" : "space-y-1.5"}>
+            {groups.map((group, groupIndex) => (
+              <React.Fragment key={group.id}>
+                <div className="relative">
+                  {showGroupConnector ? (
+                    groupIndex === 0 ? (
+                      <div className="absolute -left-8 top-0 h-px w-8 bg-border" />
+                    ) : groupIndex === groups.length - 1 ? (
+                      <div className="absolute -left-8 bottom-0 h-px w-8 bg-border" />
+                    ) : null
+                  ) : null}
+
+                  <div className="rounded-lg border bg-muted/20 p-2">
+                    <div className="mt-1.5">
+                      {group.conditions.length === 0 ? (
+                        <div className="text-muted-foreground text-sm">No conditions yet.</div>
+                      ) : (
+                        <div className="relative">
+                          {group.conditions.length > 1 ? (
+                            <>
+                              <div className="absolute top-0 bottom-0 left-7 w-px bg-border" />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="absolute left-7 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                                onClick={() =>
+                                  onChange(
+                                    groups.map((g) =>
+                                      g.id !== group.id
+                                        ? g
+                                        : { ...g, conditionsJoin: g.conditionsJoin === "all" ? "any" : "all" },
+                                    ),
+                                  )
+                                }
+                                title="Toggle condition relationship"
+                              >
+                                {group.conditionsJoin === "all" ? "AND" : "OR"}
+                              </Button>
+                            </>
+                          ) : null}
+
+                          <div className={group.conditions.length > 1 ? "grid min-w-0 pl-16" : "grid min-w-0"}>
+                            {group.conditions.map((cond, conditionIndex) => {
+                              const fieldDef = cond.field
+                                ? (FILTER_FIELD_DEFS.find((f) => f.key === cond.field) ?? null)
+                                : null;
+                              return (
+                                <div key={cond.id} className="relative min-w-0">
+                                  {group.conditions.length > 1 ? (
+                                    conditionIndex === 0 ? (
+                                      <div className="absolute -left-9 top-0 h-px w-9 bg-border" />
+                                    ) : conditionIndex === group.conditions.length - 1 ? (
+                                      <div className="absolute -left-9 bottom-0 h-px w-9 bg-border" />
+                                    ) : null
+                                  ) : null}
+
+                                  <div className="bg-background flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-md">
+                                    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-2 py-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                      <Select
+                                        value={cond.field ?? ""}
+                                        onValueChange={(value) => {
+                                          onChange(
+                                            groups.map((g) =>
+                                              g.id !== group.id
+                                                ? g
+                                                : {
+                                                    ...g,
+                                                    conditions: g.conditions.map((c) =>
+                                                      c.id === cond.id
+                                                        ? { ...c, field: value as FilterFieldKey, values: [] }
+                                                        : c,
+                                                    ),
+                                                  },
+                                            ),
+                                          );
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-8 w-[10.5rem]">
+                                          <SelectValue placeholder="Field" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {FILTER_FIELD_DEFS.map((f) => (
+                                            <SelectItem key={f.key} value={f.key}>
+                                              {f.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+
+                                      <Select
+                                        value={cond.operator}
+                                        onValueChange={(value) => {
+                                          onChange(
+                                            groups.map((g) =>
+                                              g.id !== group.id
+                                                ? g
+                                                : {
+                                                    ...g,
+                                                    conditions: g.conditions.map((c) =>
+                                                      c.id === cond.id
+                                                        ? { ...c, operator: value as FilterOperator }
+                                                        : c,
+                                                    ),
+                                                  },
+                                            ),
+                                          );
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-8 w-[9rem]">
+                                          <SelectValue placeholder="Operator" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="in">is any of</SelectItem>
+                                          <SelectItem value="notIn">is none of</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+
+                                      <ValuesPicker
+                                        disabled={!cond.field}
+                                        options={fieldDef?.options ?? []}
+                                        values={cond.values}
+                                        onChange={(nextValues) => {
+                                          onChange(
+                                            groups.map((g) =>
+                                              g.id !== group.id
+                                                ? g
+                                                : {
+                                                    ...g,
+                                                    conditions: g.conditions.map((c) =>
+                                                      c.id === cond.id ? { ...c, values: nextValues } : c,
+                                                    ),
+                                                  },
+                                            ),
+                                          );
+                                        }}
+                                      />
+                                    </div>
+
+                                    <div className="flex shrink-0 items-center">
+                                      <button
+                                        type="button"
+                                        className="text-muted-foreground hover:text-foreground px-2 py-1.5"
+                                        title="Clone"
+                                        onClick={() => {
+                                          onChange(
+                                            groups.map((g) =>
+                                              g.id !== group.id
+                                                ? g
+                                                : {
+                                                    ...g,
+                                                    conditions: [
+                                                      ...g.conditions.slice(0, conditionIndex + 1),
+                                                      { ...cond, id: newId("cond"), values: [...cond.values] },
+                                                      ...g.conditions.slice(conditionIndex + 1),
+                                                    ],
+                                                  },
+                                            ),
+                                          );
+                                        }}
+                                      >
+                                        <Copy className="size-4" />
+                                        <span className="sr-only">Clone</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="text-muted-foreground hover:text-foreground px-2 py-1.5"
+                                        title="Remove"
+                                        onClick={() => {
+                                          onChange(
+                                            groups.map((g) =>
+                                              g.id !== group.id
+                                                ? g
+                                                : {
+                                                    ...g,
+                                                    conditions:
+                                                      g.conditions.length <= 1
+                                                        ? [createEmptyCondition()]
+                                                        : g.conditions.filter((c) => c.id !== cond.id),
+                                                  },
+                                            ),
+                                          );
+                                        }}
+                                      >
+                                        <Trash2 className="size-4" />
+                                        <span className="sr-only">Remove</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary hover:text-primary"
+                          onClick={() => {
+                            onChange(
+                              groups.map((g) =>
+                                g.id !== group.id ? g : { ...g, conditions: [...g.conditions, createEmptyCondition()] },
+                              ),
+                            );
+                          }}
+                        >
+                          <Plus className="size-4" />
+                          Add condition
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            const next = groups.filter((g) => g.id !== group.id);
+                            onChange(next.length > 0 ? next : [createEmptyGroup(groupMatchMode)]);
+                          }}
+                          title={`Remove group ${groupIndex + 1}`}
+                        >
+                          <Trash2 className="size-4" />
+                          Remove group
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-2 border-t bg-muted/40 px-3 py-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8"
+          onClick={() => onChange([...groups, createEmptyGroup(groupMatchMode)])}
+        >
+          <Plus className="size-4" />
+          Add group
+        </Button>
         <Button
           type="button"
           variant="ghost"
@@ -227,239 +509,6 @@ function FiltersBuilder({
         >
           Clear all
         </Button>
-      </div>
-
-      <div className="p-3">
-        <div className="grid gap-3">
-          {groups.map((group, groupIndex) => (
-            <React.Fragment key={group.id}>
-              <div className="rounded-lg bg-muted/20 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium">Group {groupIndex + 1}</div>
-                    <Select
-                      value={group.join}
-                      onValueChange={(value) => {
-                        onChange(groups.map((g) => (g.id === group.id ? { ...g, join: value as FilterGroupJoin } : g)));
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-[10rem]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Match all (AND)</SelectItem>
-                        <SelectItem value="any">Match any (OR)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-muted-foreground hover:text-foreground"
-                    onClick={() => {
-                      const next = groups.filter((g) => g.id !== group.id);
-                      onChange(next.length > 0 ? next : [createEmptyGroup()]);
-                    }}
-                    title="Remove group"
-                  >
-                    <Trash2 className="size-4" />
-                    <span className="sr-only">Remove group</span>
-                  </Button>
-                </div>
-
-                <div className="text-muted-foreground mt-2 text-sm">
-                  {group.join === "all" ? "All of the following are true:" : "Any of the following are true:"}
-                </div>
-
-                <div className="mt-2 grid gap-2">
-                  {group.conditions.length === 0 ? (
-                    <div className="text-muted-foreground text-sm">No conditions yet.</div>
-                  ) : (
-                    group.conditions.map((cond, conditionIndex) => {
-                      const fieldDef = cond.field
-                        ? (FILTER_FIELD_DEFS.find((f) => f.key === cond.field) ?? null)
-                        : null;
-                      return (
-                        <div
-                          key={cond.id}
-                          className="bg-background flex items-center gap-2 overflow-hidden rounded-md border"
-                        >
-                          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-3 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                            <Select
-                              value={cond.field ?? ""}
-                              onValueChange={(value) => {
-                                onChange(
-                                  groups.map((g) =>
-                                    g.id !== group.id
-                                      ? g
-                                      : {
-                                          ...g,
-                                          conditions: g.conditions.map((c) =>
-                                            c.id === cond.id ? { ...c, field: value as FilterFieldKey, values: [] } : c,
-                                          ),
-                                        },
-                                  ),
-                                );
-                              }}
-                            >
-                              <SelectTrigger className="h-8 w-[10.5rem]">
-                                <SelectValue placeholder="Field" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {FILTER_FIELD_DEFS.map((f) => (
-                                  <SelectItem key={f.key} value={f.key}>
-                                    {f.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-
-                            <Select
-                              value={cond.operator}
-                              onValueChange={(value) => {
-                                onChange(
-                                  groups.map((g) =>
-                                    g.id !== group.id
-                                      ? g
-                                      : {
-                                          ...g,
-                                          conditions: g.conditions.map((c) =>
-                                            c.id === cond.id ? { ...c, operator: value as FilterOperator } : c,
-                                          ),
-                                        },
-                                  ),
-                                );
-                              }}
-                            >
-                              <SelectTrigger className="h-8 w-[9rem]">
-                                <SelectValue placeholder="Operator" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="in">is any of</SelectItem>
-                                <SelectItem value="notIn">is none of</SelectItem>
-                              </SelectContent>
-                            </Select>
-
-                            <ValuesPicker
-                              disabled={!cond.field}
-                              options={fieldDef?.options ?? []}
-                              values={cond.values}
-                              onChange={(nextValues) => {
-                                onChange(
-                                  groups.map((g) =>
-                                    g.id !== group.id
-                                      ? g
-                                      : {
-                                          ...g,
-                                          conditions: g.conditions.map((c) =>
-                                            c.id === cond.id ? { ...c, values: nextValues } : c,
-                                          ),
-                                        },
-                                  ),
-                                );
-                              }}
-                            />
-                          </div>
-
-                          <div className="flex shrink-0 items-center">
-                            <button
-                              type="button"
-                              className="text-muted-foreground hover:text-foreground px-3 py-2"
-                              title="Clone"
-                              onClick={() => {
-                                onChange(
-                                  groups.map((g) =>
-                                    g.id !== group.id
-                                      ? g
-                                      : {
-                                          ...g,
-                                          conditions: [
-                                            ...g.conditions.slice(0, conditionIndex + 1),
-                                            { ...cond, id: newId("cond"), values: [...cond.values] },
-                                            ...g.conditions.slice(conditionIndex + 1),
-                                          ],
-                                        },
-                                  ),
-                                );
-                              }}
-                            >
-                              <Copy className="size-4" />
-                              <span className="sr-only">Clone</span>
-                            </button>
-                            <button
-                              type="button"
-                              className="text-muted-foreground hover:text-foreground px-3 py-2"
-                              title="Remove"
-                              onClick={() => {
-                                onChange(
-                                  groups.map((g) =>
-                                    g.id !== group.id
-                                      ? g
-                                      : {
-                                          ...g,
-                                          conditions:
-                                            g.conditions.length <= 1
-                                              ? [createEmptyCondition()]
-                                              : g.conditions.filter((c) => c.id !== cond.id),
-                                        },
-                                  ),
-                                );
-                              }}
-                            >
-                              <Trash2 className="size-4" />
-                              <span className="sr-only">Remove</span>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-primary hover:text-primary"
-                      onClick={() => {
-                        onChange(
-                          groups.map((g) =>
-                            g.id !== group.id ? g : { ...g, conditions: [...g.conditions, createEmptyCondition()] },
-                          ),
-                        );
-                      }}
-                    >
-                      <Plus className="size-4" />
-                      Add condition
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {groupIndex < groups.length - 1 ? (
-                <div className="flex items-center justify-center">
-                  <span className="text-muted-foreground rounded-full border bg-background px-3 py-1 text-xs">OR</span>
-                </div>
-              ) : null}
-            </React.Fragment>
-          ))}
-
-          <div className="flex items-center justify-start">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={() => onChange([...groups, createEmptyGroup()])}
-            >
-              <Plus className="size-4" />
-              Add group
-            </Button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -480,6 +529,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     {
       id: newId("group"),
       join: "all",
+      conditionsJoin: "all",
       conditions: [
         { id: newId("cond"), field: "protocol", operator: "in", values: ["Https"] },
         { id: newId("cond"), field: "httpVersion", operator: "in", values: ["HTTP2"] },
@@ -656,13 +706,13 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                 </FieldLabel>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <div className="relative">
+                    <div className="relative isolate z-[100] overflow-visible">
                       <Button type="button" size="icon-sm" variant="outline" title="Filters">
                         <ListFilterPlus />
                         <span className="sr-only">Filters</span>
                       </Button>
                       {totalSelectedFilters > 0 ? (
-                        <span className="bg-destructive absolute top-0 right-0 flex min-w-4 origin-center translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1 text-white text-xs">
+                        <span className="bg-destructive pointer-events-none absolute top-0 right-0 z-[110] flex min-w-4 origin-center translate-x-1/2 items-center justify-center rounded-full px-1 text-white text-xs">
                           {totalSelectedFilters}
                         </span>
                       ) : null}
@@ -671,7 +721,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                   <PopoverContent
                     align="start"
                     side="bottom"
-                    sideOffset={8}
+                    sideOffset={12}
                     className="w-auto border-0 bg-transparent p-0 shadow-none"
                   >
                     <FiltersBuilder
