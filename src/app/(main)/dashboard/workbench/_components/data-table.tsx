@@ -704,13 +704,13 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                 </FieldLabel>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <div className="relative isolate z-[100] overflow-visible">
+                    <div className="relative isolate z-10 overflow-visible">
                       <Button type="button" size="icon-sm" variant="outline" title="Filters">
                         <ListFilterPlus />
                         <span className="sr-only">Filters</span>
                       </Button>
                       {totalSelectedFilters > 0 ? (
-                        <span className="bg-destructive pointer-events-none absolute top-0 right-0 z-[110] flex min-w-4 origin-center translate-x-1/2 items-center justify-center rounded-full px-1 text-white text-xs">
+                        <span className="bg-destructive pointer-events-none absolute top-0 right-0 z-20 flex min-w-4 origin-center translate-x-1/2 items-center justify-center rounded-full px-1 text-white text-xs">
                           {totalSelectedFilters}
                         </span>
                       ) : null}
