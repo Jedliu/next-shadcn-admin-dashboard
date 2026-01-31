@@ -415,21 +415,19 @@ function FiltersBuilder({
                                       </button>
                                       <button
                                         type="button"
-                                        className="text-muted-foreground hover:text-foreground px-2 py-1.5"
+                                        className="text-muted-foreground hover:text-foreground px-2 py-1.5 disabled:pointer-events-none disabled:opacity-40"
                                         title="Remove"
+                                        disabled={groups.length === 1 && group.conditions.length === 1}
                                         onClick={() => {
+                                          if (groups.length === 1 && group.conditions.length === 1) return;
                                           onChange(
-                                            groups.map((g) =>
-                                              g.id !== group.id
-                                                ? g
-                                                : {
-                                                    ...g,
-                                                    conditions:
-                                                      g.conditions.length <= 1
-                                                        ? [createEmptyCondition()]
-                                                        : g.conditions.filter((c) => c.id !== cond.id),
-                                                  },
-                                            ),
+                                            groups.flatMap((g) => {
+                                              if (g.id !== group.id) return [g];
+                                              const nextConditions = g.conditions.filter((c) => c.id !== cond.id);
+                                              // If the group is empty, remove the group entirely.
+                                              if (nextConditions.length === 0) return [];
+                                              return [{ ...g, conditions: nextConditions }];
+                                            }),
                                           );
                                         }}
                                       >
