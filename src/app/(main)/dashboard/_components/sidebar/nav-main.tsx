@@ -5,7 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { ChevronRight, MailIcon, Pin, PlusCircleIcon, XIcon } from "lucide-react";
+import { ChevronRight, GripVerticalIcon, MailIcon, Pin, PlusCircleIcon, XIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 
 import { QuickCreateActions } from "@/app/(main)/dashboard/_components/quick-create/quick-create-actions";
@@ -153,12 +153,31 @@ export function NavMain({ items }: NavMainProps) {
   const {
     open: quickCreateOpen,
     pinned: quickCreatePinned,
+    panelWidth,
+    setPanelWidth,
     setOpen: setQuickCreateOpen,
     setPinned: setQuickCreatePinned,
   } = useQuickCreate();
   const [sidebarRight, setSidebarRight] = React.useState(0);
   const sidebarRightRef = React.useRef(0);
   const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
+  const isResizingRef = React.useRef(false);
+  const resizeStartXRef = React.useRef(0);
+  const resizeStartWidthRef = React.useRef(0);
+  const prevUserSelectRef = React.useRef<string | null>(null);
+
+  const clampPanelWidth = React.useCallback((width: number) => {
+    const min = 320; // 20rem
+    const max = typeof window !== "undefined" ? Math.floor((window.innerWidth - 48) * 0.5) : 720;
+    return Math.max(min, Math.min(max, Math.round(width)));
+  }, []);
+
+  React.useEffect(() => {
+    if (isMobile) return;
+    const onResize = () => setPanelWidth((w) => clampPanelWidth(w));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [clampPanelWidth, isMobile, setPanelWidth]);
 
   const getSidebarRight = React.useCallback(() => {
     // `sidebar-inner` reflects the visible sidebar edge for all variants.
@@ -279,15 +298,58 @@ export function NavMain({ items }: NavMainProps) {
             }}
           >
             <div
-              className="absolute top-6 bottom-6 w-[22rem] overflow-hidden rounded-lg border bg-background shadow-lg transition-[left,opacity] duration-300 ease-out"
+              className="absolute top-6 bottom-6 overflow-hidden rounded-lg border bg-background shadow-lg transition-[left,opacity] duration-300 ease-out"
               style={{
+                width: `${panelWidth}px`,
                 left: quickCreateOpen
                   ? (sidebarRightRef.current || sidebarRight || 0) + 16
-                  : (sidebarRightRef.current || sidebarRight || 0) - 352,
+                  : (sidebarRightRef.current || sidebarRight || 0) - panelWidth,
                 opacity: quickCreateOpen && (sidebarRightRef.current || sidebarRight) > 0 ? 1 : 0,
                 pointerEvents: quickCreateOpen && (sidebarRightRef.current || sidebarRight) > 0 ? "auto" : "none",
               }}
             >
+              <div
+                aria-hidden="true"
+                title="Resize"
+                className="group absolute inset-y-0 right-0 z-20 w-3 cursor-col-resize touch-none select-none"
+                onPointerDown={(e) => {
+                  if (e.button !== 0) return;
+                  isResizingRef.current = true;
+                  resizeStartXRef.current = e.clientX;
+                  resizeStartWidthRef.current = panelWidth;
+                  prevUserSelectRef.current = document.body.style.userSelect;
+                  document.body.style.userSelect = "none";
+                  (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+                }}
+                onPointerMove={(e) => {
+                  if (!isResizingRef.current) return;
+                  const delta = e.clientX - resizeStartXRef.current;
+                  setPanelWidth(clampPanelWidth(resizeStartWidthRef.current + delta));
+                }}
+                onPointerUp={(e) => {
+                  if (!isResizingRef.current) return;
+                  isResizingRef.current = false;
+                  document.body.style.userSelect = prevUserSelectRef.current ?? "";
+                  prevUserSelectRef.current = null;
+                  try {
+                    (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+                  } catch {
+                    // ignore
+                  }
+                }}
+                onPointerCancel={() => {
+                  isResizingRef.current = false;
+                  document.body.style.userSelect = prevUserSelectRef.current ?? "";
+                  prevUserSelectRef.current = null;
+                }}
+              >
+                <div className="absolute inset-y-0 right-0 w-px bg-border" />
+                <div className="pointer-events-none absolute top-1/2 right-0 -translate-y-1/2 -translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background shadow-sm">
+                    <GripVerticalIcon className="size-2.5" />
+                  </div>
+                </div>
+              </div>
               <div className="flex items-start justify-between gap-3 border-b bg-muted/50 p-4">
                 <div className="min-w-0">
                   <h2 className="truncate font-semibold">Quick Create</h2>
