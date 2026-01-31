@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { ExternalLink, Pin, PinOff, RotateCcw, XIcon } from "lucide-react";
+import { ExternalLink, GripVerticalIcon, Pin, PinOff, RotateCcw, XIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { z } from "zod";
 
@@ -79,10 +79,16 @@ function TableCellViewerBody({
   draft,
   onChange,
   isMobile,
+  pinned,
+  onTogglePinned,
+  onClose,
 }: {
   draft: ViewerItem;
   onChange: (next: ViewerItem) => void;
   isMobile: boolean;
+  pinned?: boolean;
+  onTogglePinned?: () => void;
+  onClose?: () => void;
 }) {
   const [requestTab, setRequestTab] = React.useState("overview");
   const [responseTab, setResponseTab] = React.useState("raw");
@@ -125,20 +131,46 @@ function TableCellViewerBody({
         <ResizablePanel defaultSize={55} minSize={20} className="min-h-0">
           <Tabs value={requestTab} onValueChange={setRequestTab} className="flex h-full min-h-0 flex-col gap-0">
             <div className="flex items-center justify-between gap-3 border-b bg-muted/40 p-2">
-              <TabsList className="h-9">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="headers">Headers (4)</TabsTrigger>
-                <TabsTrigger value="body">Body</TabsTrigger>
-                <TabsTrigger value="cookies">Cookies (0)</TabsTrigger>
-              </TabsList>
-              <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                GET
-              </Badge>
+              <div className="min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <TabsList className="h-9 w-max">
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="headers">Headers (4)</TabsTrigger>
+                  <TabsTrigger value="body">Body</TabsTrigger>
+                  <TabsTrigger value="cookies">Cookies (0)</TabsTrigger>
+                </TabsList>
+              </div>
+              <span className="flex shrink-0 items-center gap-2">
+                <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                  GET
+                </Badge>
+                {!isMobile && onTogglePinned ? (
+                  <button
+                    type="button"
+                    onClick={onTogglePinned}
+                    title={pinned ? "Unpin" : "Pin"}
+                    className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+                  >
+                    {pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
+                    <span className="sr-only">{pinned ? "Unpin" : "Pin"}</span>
+                  </button>
+                ) : null}
+                {onClose ? (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    title="Close"
+                    className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+                  >
+                    <XIcon className="size-4" />
+                    <span className="sr-only">Close</span>
+                  </button>
+                ) : null}
+              </span>
             </div>
 
             <div className="border-b p-2">
               <div className="flex items-center gap-2">
-                <Label className="text-muted-foreground sr-only" htmlFor="request-url">
+                <Label className="sr-only text-muted-foreground" htmlFor="request-url">
                   URL
                 </Label>
                 <Input
@@ -225,13 +257,15 @@ function TableCellViewerBody({
         <ResizablePanel defaultSize={45} minSize={20} className="min-h-0">
           <Tabs value={responseTab} onValueChange={setResponseTab} className="flex h-full min-h-0 flex-col gap-0">
             <div className="flex items-center justify-between gap-3 border-b bg-muted/40 p-2">
-              <TabsList className="h-9">
-                <TabsTrigger value="raw">Raw</TabsTrigger>
-                <TabsTrigger value="resp-headers">Headers (26)</TabsTrigger>
-                <TabsTrigger value="resp-body">Body</TabsTrigger>
-                <TabsTrigger value="set-cookie">Set-Cookie (0)</TabsTrigger>
-              </TabsList>
-              <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <TabsList className="h-9 w-max">
+                  <TabsTrigger value="raw">Raw</TabsTrigger>
+                  <TabsTrigger value="resp-headers">Headers (26)</TabsTrigger>
+                  <TabsTrigger value="resp-body">Body</TabsTrigger>
+                  <TabsTrigger value="set-cookie">Set-Cookie (0)</TabsTrigger>
+                </TabsList>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
                 <Badge variant="secondary">h2</Badge>
                 <Badge variant="secondary">200</Badge>
               </div>
@@ -306,7 +340,7 @@ export function TableCellViewerDrawer() {
   const DESKTOP_FLOATING_ANIMATION_MS = 500; // Match Vaul's default timing.
 
   const clampWidth = React.useCallback((width: number) => {
-    const min = 288; // 18rem
+    const min = 360; // 22.5rem
     // Allow resizing up to ~50% of the available viewport width (minus the drawer inset).
     const max = typeof window !== "undefined" ? Math.floor((window.innerWidth - 48) * 0.5) : 720;
     return Math.max(min, Math.min(max, Math.round(width)));
@@ -448,7 +482,7 @@ export function TableCellViewerDrawer() {
           <div
             aria-hidden="true"
             title="Resize"
-            className="absolute inset-y-0 left-0 w-2 cursor-col-resize touch-none select-none"
+            className="group absolute inset-y-0 left-0 z-20 w-3 cursor-col-resize touch-none select-none"
             onPointerDown={(e) => {
               if (e.button !== 0) return;
               isResizingRef.current = true;
@@ -481,33 +515,20 @@ export function TableCellViewerDrawer() {
             }}
           >
             <div className="absolute inset-y-0 left-0 w-px bg-border" />
-          </div>
-
-          <div className="flex items-center justify-end gap-1 border-b bg-muted/50 p-2">
-            <button
-              type="button"
-              onClick={() => setPinned(true)}
-              title="Pin"
-              className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-            >
-              <Pin className="size-4" />
-              <span className="sr-only">Pin</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              title="Close"
-              className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-            >
-              <XIcon className="size-4" />
-              <span className="sr-only">Close</span>
-            </button>
+            <div className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background shadow-sm">
+                <GripVerticalIcon className="size-2.5" />
+              </div>
+            </div>
           </div>
 
           <TableCellViewerBody
             draft={draft}
             onChange={(next) => setDrafts((prev) => ({ ...prev, [item.id]: next }))}
             isMobile={false}
+            pinned={false}
+            onTogglePinned={() => setPinned(true)}
+            onClose={() => setOpen(false)}
           />
         </div>
       </div>,
@@ -560,7 +581,7 @@ export function TableCellViewerDrawer() {
           <div
             aria-hidden="true"
             title="Resize"
-            className="absolute inset-y-0 left-0 w-2 cursor-col-resize touch-none select-none"
+            className="group absolute inset-y-0 left-0 z-20 w-3 cursor-col-resize touch-none select-none"
             onPointerDown={(e) => {
               if (e.button !== 0) return;
               isResizingRef.current = true;
@@ -593,12 +614,19 @@ export function TableCellViewerDrawer() {
             }}
           >
             <div className="absolute inset-y-0 left-0 w-px bg-border" />
+            <div className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background shadow-sm">
+                <GripVerticalIcon className="size-2.5" />
+              </div>
+            </div>
           </div>
         )}
         <TableCellViewerBody
           draft={draft}
           onChange={(next) => setDrafts((prev) => ({ ...prev, [item.id]: next }))}
           isMobile={isMobile}
+          pinned={false}
+          onClose={() => setOpen(false)}
         />
       </DrawerContent>
     </Drawer>
@@ -615,7 +643,7 @@ export function TableCellViewerInset() {
   const prevUserSelectRef = React.useRef<string | null>(null);
 
   const clampWidth = React.useCallback((width: number) => {
-    const min = 288; // 18rem
+    const min = 360; // 22.5rem
     // Allow resizing up to ~50% of the available viewport width (minus the drawer inset).
     const max = typeof window !== "undefined" ? Math.floor((window.innerWidth - 48) * 0.5) : 720;
     return Math.max(min, Math.min(max, Math.round(width)));
@@ -638,7 +666,7 @@ export function TableCellViewerInset() {
         <div
           aria-hidden="true"
           title="Resize"
-          className="absolute top-0 bottom-0 left-0 z-10 w-2 cursor-col-resize touch-none select-none"
+          className="group absolute top-0 bottom-0 left-0 z-20 w-3 cursor-col-resize touch-none select-none"
           onPointerDown={(e) => {
             if (e.button !== 0) return;
             isResizingRef.current = true;
@@ -671,31 +699,19 @@ export function TableCellViewerInset() {
           }}
         >
           <div className="absolute top-0 bottom-0 left-0 w-px bg-border" />
-        </div>
-        <div className="flex items-center justify-end gap-1 border-b bg-muted/50 p-2">
-          <button
-            type="button"
-            onClick={() => setPinned(false)}
-            title="Unpin"
-            className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            <PinOff className="size-4" />
-            <span className="sr-only">Unpin</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            title="Close"
-            className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            <XIcon className="size-4" />
-            <span className="sr-only">Close</span>
-          </button>
+          <div className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background shadow-sm">
+              <GripVerticalIcon className="size-2.5" />
+            </div>
+          </div>
         </div>
         <TableCellViewerBody
           draft={draft}
           onChange={(next) => setDrafts((prev) => ({ ...prev, [item.id]: next }))}
           isMobile={false}
+          pinned
+          onTogglePinned={() => setPinned(false)}
+          onClose={() => setOpen(false)}
         />
       </section>
     </aside>
