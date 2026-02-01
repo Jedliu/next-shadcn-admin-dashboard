@@ -3,19 +3,23 @@
 
 import * as React from "react";
 
-import { Copy, ListFilterPlus, Plus, SlidersHorizontal, Trash2, XIcon } from "lucide-react";
+import { Copy, GripVerticalIcon, ListFilterPlus, Plus, Trash2, XIcon } from "lucide-react";
+import { createPortal } from "react-dom";
 import type { z } from "zod";
 
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Field, FieldLabel, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 import { DataTable as DataTableNew } from "../../../../../components/data-table/data-table";
 import { DataTablePagination } from "../../../../../components/data-table/data-table-pagination";
@@ -206,25 +210,38 @@ function FiltersBuilder({
   totalActiveConditions,
   onClearAll,
   onChange,
+  variant = "popover",
+  showHeader = variant === "popover",
 }: {
   groups: FilterGroup[];
   totalActiveConditions: number;
   onClearAll: () => void;
   onChange: (next: FilterGroup[]) => void;
+  variant?: "popover" | "panel";
+  showHeader?: boolean;
 }) {
   const groupMatchMode = groups[0]?.join ?? "all";
   const showGroupConnector = groups.length > 1;
 
   return (
-    <div className="flex max-h-[calc(var(--radix-popover-content-available-height)-0.75rem)] w-[44rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg">
-      <div className="flex items-center justify-between gap-4 border-b bg-muted/40 px-3 py-2">
-        <div className="flex items-center gap-2">
-          <div className="font-medium text-sm">Filters</div>
-          {totalActiveConditions > 0 ? <Badge variant="secondary">{totalActiveConditions}</Badge> : null}
+    <div
+      className={cn(
+        "flex flex-col overflow-hidden",
+        variant === "popover" &&
+          "max-h-[calc(var(--radix-popover-content-available-height)-0.75rem)] w-[44rem] max-w-[calc(100vw-2rem)] rounded-lg border bg-popover text-popover-foreground shadow-lg",
+        variant === "panel" && "min-h-0 flex-1",
+      )}
+    >
+      {showHeader ? (
+        <div className="flex items-center justify-between gap-4 border-b bg-muted/40 px-3 py-2">
+          <div className="flex items-center gap-2">
+            <div className="font-medium text-sm">Filters</div>
+            {totalActiveConditions > 0 ? <Badge variant="secondary">{totalActiveConditions}</Badge> : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div className={cn("min-h-0 flex-1 overflow-y-auto", variant === "popover" ? "p-2" : "p-3")}>
         <div className="relative">
           {showGroupConnector ? (
             <>
@@ -512,6 +529,247 @@ function FiltersBuilder({
   );
 }
 
+function FiltersPanelDrawer({
+  open,
+  panelWidth,
+  setPanelWidth,
+  totalActiveConditions,
+  onOpenChange,
+  children,
+}: {
+  open: boolean;
+  panelWidth: number;
+  setPanelWidth: React.Dispatch<React.SetStateAction<number>>;
+  totalActiveConditions: number;
+  onOpenChange: (open: boolean) => void;
+  children: React.ReactNode;
+}) {
+  const isMobile = useIsMobile();
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
+  const isResizingRef = React.useRef(false);
+  const resizeStartXRef = React.useRef(0);
+  const resizeStartWidthRef = React.useRef(0);
+  const prevUserSelectRef = React.useRef<string | null>(null);
+  const [desktopPosition, setDesktopPosition] = React.useState<null | { top: number; right: number; bottom: number }>(
+    null,
+  );
+  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
+  const [mounted, setMounted] = React.useState(false);
+  const [visible, setVisible] = React.useState(false);
+  const unmountTimeoutRef = React.useRef<number | null>(null);
+  const DESKTOP_FLOATING_ANIMATION_MS = 500; // Match the existing right panel animation.
+
+  const clampWidth = React.useCallback((width: number) => {
+    const min = 360; // 22.5rem
+    const max = typeof window !== "undefined" ? Math.floor((window.innerWidth - 48) * 0.5) : 720;
+    return Math.max(min, Math.min(max, Math.round(width)));
+  }, []);
+
+  React.useEffect(() => {
+    if (isMobile) return;
+    setPortalTarget(document.body);
+  }, [isMobile]);
+
+  React.useEffect(() => {
+    if (isMobile) return;
+    const onResize = () => setPanelWidth((w) => clampWidth(w));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [clampWidth, isMobile, setPanelWidth]);
+
+  React.useEffect(() => {
+    if (isMobile) {
+      setDesktopPosition(null);
+      return;
+    }
+
+    // Keep the last computed position while closing so the panel doesn't "jump" during the animation.
+    if (!open) return;
+
+    let raf = 0;
+    const update = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const anchor = document.querySelector<HTMLElement>('[data-slot="table-cell-viewer-anchor"]');
+        const rect = anchor?.getBoundingClientRect();
+        if (!rect) return;
+        setDesktopPosition({
+          top: Math.round(rect.top),
+          right: Math.max(0, Math.round(window.innerWidth - rect.right)),
+          bottom: Math.max(0, Math.round(window.innerHeight - rect.bottom)),
+        });
+      });
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+
+    const anchor = document.querySelector<HTMLElement>('[data-slot="table-cell-viewer-anchor"]');
+    const ro = anchor ? new ResizeObserver(update) : null;
+    if (anchor && ro) ro.observe(anchor);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+      ro?.disconnect();
+    };
+  }, [isMobile, open]);
+
+  React.useEffect(() => {
+    if (isMobile) return;
+    if (unmountTimeoutRef.current) {
+      window.clearTimeout(unmountTimeoutRef.current);
+      unmountTimeoutRef.current = null;
+    }
+
+    if (open) {
+      setMounted(true);
+      // Start from hidden so the entrance animation is visible.
+      setVisible(false);
+      return;
+    }
+
+    // Closing: animate out, then unmount after the transition.
+    setVisible(false);
+    unmountTimeoutRef.current = window.setTimeout(() => setMounted(false), DESKTOP_FLOATING_ANIMATION_MS);
+    return () => {
+      if (unmountTimeoutRef.current) {
+        window.clearTimeout(unmountTimeoutRef.current);
+        unmountTimeoutRef.current = null;
+      }
+    };
+  }, [isMobile, open]);
+
+  React.useEffect(() => {
+    if (isMobile) return;
+    if (!mounted || !desktopPosition) return;
+    const raf = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(raf);
+  }, [desktopPosition, isMobile, mounted]);
+
+  if (!isMobile) {
+    if (!portalTarget || !mounted || !desktopPosition) return null;
+
+    const width = clampWidth(panelWidth);
+    const hiddenTranslateX = width + desktopPosition.right + 32;
+
+    return createPortal(
+      <div className="pointer-events-none fixed inset-0 z-40">
+        <div
+          ref={contentRef}
+          className={cn(
+            "pointer-events-auto absolute flex flex-col overflow-hidden rounded-lg border bg-background shadow-lg",
+            "transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          )}
+          style={{
+            top: `${desktopPosition.top}px`,
+            right: `${desktopPosition.right}px`,
+            bottom: `${desktopPosition.bottom}px`,
+            width: `${width}px`,
+            transform: visible ? "translate3d(0,0,0)" : `translate3d(${hiddenTranslateX}px,0,0)`,
+          }}
+        >
+          <div
+            aria-hidden="true"
+            title="Resize"
+            className="group absolute inset-y-0 left-0 z-20 w-3 cursor-col-resize touch-none select-none"
+            onPointerDown={(e) => {
+              if (e.button !== 0) return;
+              isResizingRef.current = true;
+              resizeStartXRef.current = e.clientX;
+              resizeStartWidthRef.current = panelWidth;
+              prevUserSelectRef.current = document.body.style.userSelect;
+              document.body.style.userSelect = "none";
+              (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              if (!isResizingRef.current) return;
+              const delta = resizeStartXRef.current - e.clientX;
+              setPanelWidth(clampWidth(resizeStartWidthRef.current + delta));
+            }}
+            onPointerUp={(e) => {
+              if (!isResizingRef.current) return;
+              isResizingRef.current = false;
+              document.body.style.userSelect = prevUserSelectRef.current ?? "";
+              prevUserSelectRef.current = null;
+              try {
+                (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+              } catch {
+                // ignore
+              }
+            }}
+            onPointerCancel={() => {
+              isResizingRef.current = false;
+              document.body.style.userSelect = prevUserSelectRef.current ?? "";
+              prevUserSelectRef.current = null;
+            }}
+          >
+            <div className="absolute inset-y-0 left-0 w-px bg-border" />
+            <div className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background shadow-sm">
+                <GripVerticalIcon className="size-2.5" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 border-b bg-muted/40 p-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="min-w-0 truncate font-medium text-sm">Filters</div>
+              {totalActiveConditions > 0 ? <Badge variant="secondary">{totalActiveConditions}</Badge> : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              title="Close"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <XIcon className="size-4" />
+              <span className="sr-only">Close</span>
+            </button>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+        </div>
+      </div>,
+      portalTarget,
+    );
+  }
+
+  return (
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      direction={isMobile ? "bottom" : "right"}
+      modal={false}
+      dismissible={false}
+    >
+      <DrawerContent hideOverlay className="overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex items-center justify-between gap-2 border-b bg-muted/40 p-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="min-w-0 truncate font-medium text-sm">Filters</div>
+              {totalActiveConditions > 0 ? <Badge variant="secondary">{totalActiveConditions}</Badge> : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              title="Close"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <XIcon className="size-4" />
+              <span className="sr-only">Close</span>
+            </button>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
 export function DataTable({ data: initialData }: { data: z.infer<typeof sectionSchema>[] }) {
   const [data, setData] = React.useState(() => initialData);
   const columns = withDndColumn(dashboardColumns);
@@ -537,6 +795,8 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     },
   ]);
   const [filtersEnabled, setFiltersEnabled] = React.useState(true);
+  const [filtersPanelOpen, setFiltersPanelOpen] = React.useState(false);
+  const [filtersPanelWidth, setFiltersPanelWidth] = React.useState(416);
   const facetFilters = React.useMemo(() => deriveFacetFilters(filterGroups), [filterGroups]);
 
   const setFacetFilter = React.useCallback((group: FilterFieldKey, values?: string[]) => {
@@ -573,6 +833,12 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
   const totalSelectedFilters = React.useMemo(() => countActiveConditions(filterGroups), [filterGroups]);
   const hasAnyFilters = totalSelectedFilters > 0;
   const showFiltered = hasAnyFilters && filtersEnabled;
+
+  React.useEffect(() => {
+    if (activeTab !== "outline" && filtersPanelOpen) {
+      setFiltersPanelOpen(false);
+    }
+  }, [activeTab, filtersPanelOpen]);
 
   React.useEffect(() => {
     if (!hasAnyFilters && filtersEnabled) {
@@ -704,40 +970,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                     <FieldTitle>{showFiltered ? "Filtered" : "All"}</FieldTitle>
                   </Field>
                 </FieldLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <div className="relative isolate z-10 overflow-visible">
-                      <Button type="button" size="icon-sm" variant="outline" title="Filters">
-                        <ListFilterPlus />
-                        <span className="sr-only">Filters</span>
-                      </Button>
-                      {totalSelectedFilters > 0 ? (
-                        <span className="bg-destructive pointer-events-none absolute top-0 right-0 z-20 flex min-w-4 origin-center translate-x-1/2 items-center justify-center rounded-full px-1 text-white text-xs">
-                          {totalSelectedFilters}
-                        </span>
-                      ) : null}
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="start"
-                    side="bottom"
-                    sideOffset={12}
-                    className="w-auto border-0 bg-transparent p-0 shadow-none"
-                  >
-                    <FiltersBuilder
-                      groups={filterGroups}
-                      totalActiveConditions={totalSelectedFilters}
-                      onClearAll={() => {
-                        setFilterGroups([createEmptyGroup()]);
-                        setFiltersEnabled(false);
-                      }}
-                      onChange={(next) => {
-                        setFilterGroups(next);
-                        setFiltersEnabled(true);
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
                 <div className="h-6 w-px bg-border" />
                 <DataTableFacetedFilter
                   title="Protocol"
@@ -804,9 +1036,21 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             </div>
             <div className="flex items-center gap-2">
               <DataTableViewOptions table={table} />
-              <Button variant="outline" size="sm">
-                <SlidersHorizontal />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setFiltersPanelOpen((prev) => !prev)}
+                disabled={activeTab !== "outline"}
+                className="relative"
+              >
+                <ListFilterPlus />
                 <span className="hidden lg:inline">Filters</span>
+                {totalSelectedFilters > 0 ? (
+                  <span className="pointer-events-none absolute top-0 right-0 z-20 flex min-w-4 origin-center translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-destructive px-1 text-white text-xs">
+                    {totalSelectedFilters}
+                  </span>
+                ) : null}
               </Button>
             </div>
           </div>
@@ -823,6 +1067,28 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
           ))}
         </Tabs>
         <TableCellViewerDrawer />
+        <FiltersPanelDrawer
+          open={filtersPanelOpen}
+          onOpenChange={setFiltersPanelOpen}
+          panelWidth={filtersPanelWidth}
+          setPanelWidth={setFiltersPanelWidth}
+          totalActiveConditions={totalSelectedFilters}
+        >
+          <FiltersBuilder
+            groups={filterGroups}
+            totalActiveConditions={totalSelectedFilters}
+            onClearAll={() => {
+              setFilterGroups([createEmptyGroup()]);
+              setFiltersEnabled(false);
+            }}
+            onChange={(next) => {
+              setFilterGroups(next);
+              setFiltersEnabled(true);
+            }}
+            variant="panel"
+            showHeader={false}
+          />
+        </FiltersPanelDrawer>
       </div>
     </TableCellViewerProvider>
   );
