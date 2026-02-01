@@ -76,6 +76,11 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
   const [orderMenuOpen, setOrderMenuOpen] = React.useState(false);
   const [columnIds, setColumnIds] = React.useState<string[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
+  const columnIdsRef = React.useRef<string[]>([]);
+
+  React.useEffect(() => {
+    columnIdsRef.current = columnIds;
+  }, [columnIds]);
 
   const getReorderableVisibleColumns = React.useCallback(
     () =>
@@ -123,14 +128,14 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
       const newIndex = prev.indexOf(overId);
       if (oldIndex === -1 || newIndex === -1) return prev;
 
-      const next = arrayMove(prev, oldIndex, newIndex);
-      applyColumnOrder(next);
-      return next;
+      return arrayMove(prev, oldIndex, newIndex);
     });
   }
 
   function handleDragEnd(_event: DragEndEvent) {
     setIsDragging(false);
+    // Apply column order after the DnD interaction commits to avoid render-phase updates.
+    applyColumnOrder(columnIdsRef.current);
   }
 
   const canOrderColumns = getReorderableVisibleColumns().length > 1;
