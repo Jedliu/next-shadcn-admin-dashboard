@@ -4,11 +4,13 @@ import * as React from "react";
 
 import { GripVerticalIcon, PinOff, XIcon } from "lucide-react";
 
+import { HistoryPanel } from "@/app/(main)/dashboard/_components/quick-create/history-panel";
 import { QuickCreateActions } from "@/app/(main)/dashboard/_components/quick-create/quick-create-actions";
 import { useQuickCreate } from "@/app/(main)/dashboard/_components/quick-create/quick-create-provider";
+import { cn } from "@/lib/utils";
 
 export function QuickCreateInset({ children }: { readonly children: React.ReactNode }) {
-  const { open, pinned, panelWidth, setOpen, setPinned, setPanelWidth } = useQuickCreate();
+  const { open, pinned, panelWidth, panel, setOpen, setPinned, setPanelWidth } = useQuickCreate();
   const isResizingRef = React.useRef(false);
   const resizeStartXRef = React.useRef(0);
   const resizeStartWidthRef = React.useRef(0);
@@ -67,10 +69,21 @@ export function QuickCreateInset({ children }: { readonly children: React.ReactN
                 </div>
               </div>
             </div>
-            <div className="flex items-start justify-between gap-3 border-b bg-muted/50 p-4">
+            <div
+              className={cn(
+                "flex items-start justify-between gap-3 border-b bg-muted/50",
+                panel === "history" ? "p-3" : "p-4",
+              )}
+            >
               <div className="min-w-0">
-                <h2 className="truncate font-semibold">Quick Create</h2>
-                <p className="text-muted-foreground text-sm">Create common items without leaving your current page.</p>
+                <h2 className={cn("truncate", panel === "history" ? "text-sm font-medium" : "font-semibold")}>
+                  {panel === "history" ? "History" : "Quick Create"}
+                </h2>
+                {panel === "history" ? null : (
+                  <p className="text-muted-foreground text-sm">
+                    Create common items without leaving your current page.
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -93,7 +106,7 @@ export function QuickCreateInset({ children }: { readonly children: React.ReactN
                 </button>
               </div>
             </div>
-            <QuickCreateActions className="flex-1 p-4" />
+            {panel === "history" ? <HistoryPanel className="flex-1" /> : <QuickCreateActions className="flex-1 p-4" />}
           </section>
         </aside>
       )}

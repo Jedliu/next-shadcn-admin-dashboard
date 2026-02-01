@@ -3,7 +3,7 @@ import { Fingerprint, History, LayoutDashboard, type LucideIcon, Puzzle } from "
 import { proxyNavItem } from "@/navigation/proxy/proxy-nav";
 import { settingsNavItem } from "@/navigation/settings/settings-nav";
 
-export type NavAction = "quick-create";
+export type NavAction = "quick-create" | "history";
 
 export interface NavSubItem {
   title: string;
@@ -46,7 +46,7 @@ export const sidebarItems: NavGroup[] = [
         title: "History",
         url: "/dashboard/workbench/history",
         icon: History,
-        action: "quick-create",
+        action: "history",
       },
       {
         title: "Plugins",

@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { ChevronRight, GripVerticalIcon, MailIcon, Pin, PlusCircleIcon, XIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 
+import { HistoryPanel } from "@/app/(main)/dashboard/_components/quick-create/history-panel";
 import { QuickCreateActions } from "@/app/(main)/dashboard/_components/quick-create/quick-create-actions";
 import { useQuickCreate } from "@/app/(main)/dashboard/_components/quick-create/quick-create-provider";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import type { NavAction, NavGroup, NavMainItem, NavSubItem } from "@/navigation/sidebar/sidebar-items";
 
 interface NavMainProps {
@@ -216,9 +218,11 @@ export function NavMain({ items }: NavMainProps) {
     open: quickCreateOpen,
     pinned: quickCreatePinned,
     panelWidth,
+    panel,
     setPanelWidth,
     setOpen: setQuickCreateOpen,
     setPinned: setQuickCreatePinned,
+    togglePanel,
   } = useQuickCreate();
   const [sidebarRight, setSidebarRight] = React.useState(0);
   const sidebarRightRef = React.useRef(0);
@@ -260,8 +264,8 @@ export function NavMain({ items }: NavMainProps) {
   }, [getSidebarRight]);
 
   const toggleQuickCreate = React.useCallback(() => {
-    setQuickCreateOpen((prev) => !prev);
-  }, [setQuickCreateOpen]);
+    togglePanel("quick-create");
+  }, [togglePanel]);
 
   React.useEffect(() => {
     if (isMobile) return;
@@ -308,9 +312,10 @@ export function NavMain({ items }: NavMainProps) {
 
   const onSubItemAction = React.useCallback(
     (action: NavAction) => {
-      if (action === "quick-create") setQuickCreateOpen(true);
+      if (action === "quick-create") togglePanel("quick-create");
+      if (action === "history") togglePanel("history");
     },
-    [setQuickCreateOpen],
+    [togglePanel],
   );
 
   return (
@@ -344,10 +349,16 @@ export function NavMain({ items }: NavMainProps) {
         <Drawer open={quickCreateOpen} onOpenChange={setQuickCreateOpen} direction="bottom" modal noBodyStyles={false}>
           <DrawerContent>
             <DrawerHeader className="gap-1">
-              <DrawerTitle>Quick Create</DrawerTitle>
-              <DrawerDescription>Create common items without leaving your current page.</DrawerDescription>
+              <DrawerTitle>{panel === "history" ? "History" : "Quick Create"}</DrawerTitle>
+              {panel === "history" ? null : (
+                <DrawerDescription>Create common items without leaving your current page.</DrawerDescription>
+              )}
             </DrawerHeader>
-            <QuickCreateActions className="flex-1 p-4 pt-0" />
+            {panel === "history" ? (
+              <HistoryPanel className="flex-1" />
+            ) : (
+              <QuickCreateActions className="flex-1 p-4 pt-0" />
+            )}
           </DrawerContent>
         </Drawer>
       ) : (
@@ -363,7 +374,7 @@ export function NavMain({ items }: NavMainProps) {
             }}
           >
             <div
-              className="absolute top-6 bottom-6 overflow-hidden rounded-lg border bg-background shadow-lg transition-[left,opacity] duration-300 ease-out"
+              className="absolute top-6 bottom-6 flex min-h-0 flex-col overflow-hidden rounded-lg border bg-background shadow-lg transition-[left,opacity] duration-300 ease-out"
               style={{
                 width: `${panelWidth}px`,
                 left: quickCreateOpen
@@ -415,12 +426,21 @@ export function NavMain({ items }: NavMainProps) {
                   </div>
                 </div>
               </div>
-              <div className="flex items-start justify-between gap-3 border-b bg-muted/50 p-4">
+              <div
+                className={cn(
+                  "flex items-start justify-between gap-3 border-b bg-muted/50",
+                  panel === "history" ? "p-3" : "p-4",
+                )}
+              >
                 <div className="min-w-0">
-                  <h2 className="truncate font-semibold">Quick Create</h2>
-                  <p className="text-muted-foreground text-sm">
-                    Create common items without leaving your current page.
-                  </p>
+                  <h2 className={cn("truncate", panel === "history" ? "text-sm font-medium" : "font-semibold")}>
+                    {panel === "history" ? "History" : "Quick Create"}
+                  </h2>
+                  {panel === "history" ? null : (
+                    <p className="text-muted-foreground text-sm">
+                      Create common items without leaving your current page.
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1">
                   <button
@@ -443,7 +463,11 @@ export function NavMain({ items }: NavMainProps) {
                   </button>
                 </div>
               </div>
-              <QuickCreateActions className="flex-1 p-4" />
+              {panel === "history" ? (
+                <HistoryPanel className="flex-1" />
+              ) : (
+                <QuickCreateActions className="flex-1 p-4" />
+              )}
             </div>
           </div>,
           portalTarget,
