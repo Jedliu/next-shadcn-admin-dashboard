@@ -771,9 +771,82 @@ function FiltersPanelDrawer({
 }
 
 export function DataTable({ data: initialData }: { data: z.infer<typeof sectionSchema>[] }) {
-  const [data, setData] = React.useState(() => initialData);
+  const [data, setData] = React.useState<z.infer<typeof sectionSchema>[]>(() => {
+    const now = Date.now();
+    return initialData.map((row, index): z.infer<typeof sectionSchema> => {
+      const id = row.id;
+      const ssl = id % 2 === 0;
+      const method = id % 3 === 0 ? "POST" : "GET";
+      const code = [200, 204, 301, 304, 400, 401, 403, 404, 500][id % 9] ?? 200;
+      const ts = new Date(now - (index * 7 + id) * 60_000);
+      const date = ts.toISOString().slice(0, 10);
+      const time = ts.toTimeString().slice(0, 8);
+      const host = "api.studio-admin.dev";
+      const path = `/v1/items/${id}`;
+      const query = `q=${encodeURIComponent(row.header)}`;
+      const url = `https://${host}${path}?${query}`;
+      const duration = 120 + (id % 9) * 37;
+      const latency = 20 + (id % 7) * 9;
+      const requestTotalTime = Math.round(duration * 0.45);
+      const responseTotalTime = Math.max(1, duration - requestTotalTime);
+      const timeComplete = duration + latency;
+      const requestBodySize = 300 + (id % 13) * 97;
+      const responseBodySize = 900 + (id % 17) * 131;
+      const requestBodySizeCompressed = Math.round(requestBodySize * 0.62);
+      const responseBodySizeCompressed = Math.round(responseBodySize * 0.58);
+      const serverIpAddress = `10.0.${id % 10}.${(id % 240) + 10}`;
+      const edited = id % 5 === 0;
+      const client = row.reviewer;
+      const comment = id % 4 === 0 ? "Needs review" : "";
+
+      return {
+        ...row,
+        ssl,
+        method,
+        code,
+        date,
+        time,
+        url,
+        host,
+        path,
+        query,
+        duration,
+        latency,
+        requestTotalTime,
+        responseTotalTime,
+        timeComplete,
+        requestBodySize,
+        responseBodySize,
+        requestBodySizeCompressed,
+        responseBodySizeCompressed,
+        serverIpAddress,
+        edited,
+        client,
+        comment,
+        // Keep the existing viewer input functional: use `target` as URL.
+        target: url,
+      };
+    });
+  });
   const columns = withDndColumn(dashboardColumns);
-  const table = useDataTableInstance({ data, columns, getRowId: (row) => row.id.toString() });
+  const table = useDataTableInstance({
+    data,
+    columns,
+    defaultColumnVisibility: {
+      host: false,
+      path: false,
+      query: false,
+      date: false,
+      timeComplete: false,
+      requestTotalTime: false,
+      responseTotalTime: false,
+      latency: false,
+      requestBodySizeCompressed: false,
+      responseBodySizeCompressed: false,
+      serverIpAddress: false,
+    },
+    getRowId: (row) => row.id.toString(),
+  });
   const [tabs, setTabs] = React.useState([
     { value: "outline", label: "Outline" },
     { value: "past-performance", label: "Past Performance", badge: 3 },

@@ -1,6 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { CircleCheck, EllipsisVertical, Loader } from "lucide-react";
-import { toast } from "sonner";
+import { CircleCheck, EllipsisVertical, Loader, Lock } from "lucide-react";
 import type { z } from "zod";
 
 import { Badge } from "@/components/ui/badge";
@@ -13,13 +12,29 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { DataTableColumnHeader } from "../../../../../components/data-table/data-table-column-header";
 import type { sectionSchema } from "./schema";
 import { TableCellViewer } from "./table-cell-viewer";
+
+function formatMs(value?: number) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "";
+  if (value < 1000) return `${value} ms`;
+  return `${(value / 1000).toFixed(2)} s`;
+}
+
+function formatBytes(value?: number) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "";
+  const units = ["B", "KB", "MB", "GB"] as const;
+  let v = value;
+  let idx = 0;
+  while (v >= 1024 && idx < units.length - 1) {
+    v /= 1024;
+    idx += 1;
+  }
+  const digits = idx === 0 ? 0 : idx === 1 ? 0 : 1;
+  return `${v.toFixed(digits)} ${units[idx]}`;
+}
 
 export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
   {
@@ -50,26 +65,96 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     maxSize: 48,
   },
   {
-    accessorKey: "header",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Header" />,
-    cell: ({ row }) => {
-      return <TableCellViewer item={row.original} />;
-    },
-    size: 360,
-    minSize: 80,
-  },
-  {
-    accessorKey: "type",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Section Type" />,
+    accessorKey: "ssl",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="SSL" />,
     cell: ({ row }) => (
-      <div className="w-32 max-w-full">
-        <Badge variant="outline" className="px-1.5 text-muted-foreground">
-          {row.original.type}
-        </Badge>
+      <div className="flex items-center justify-center">
+        {row.original.ssl ? <Lock className="size-4 text-muted-foreground" /> : null}
       </div>
     ),
+    size: 56,
+    minSize: 56,
+    meta: { label: "SSL", order: 1 },
+  },
+  {
+    id: "statusIcon",
+    accessorFn: (row) => row.status,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Status Icon" />,
+    cell: ({ row }) => (
+      <div className="flex items-center justify-center">
+        {row.original.status === "Done" ? (
+          <CircleCheck className="size-4 fill-green-500 stroke-border dark:fill-green-400" />
+        ) : (
+          <Loader className="size-4 text-muted-foreground" />
+        )}
+      </div>
+    ),
+    size: 84,
+    minSize: 84,
+    meta: { label: "Status Icon", order: 2 },
+  },
+  {
+    accessorKey: "id",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="ID" />,
+    cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{row.original.id}</span>,
+    size: 80,
+    minSize: 72,
+    meta: { label: "ID", order: 3 },
+  },
+  {
+    accessorKey: "url",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="URL" />,
+    cell: ({ row }) => {
+      const label = row.original.url ?? row.original.target ?? "";
+      return <TableCellViewer item={row.original} label={label} />;
+    },
+    size: 420,
+    minSize: 160,
+    meta: { label: "URL", order: 4 },
+  },
+  {
+    accessorKey: "host",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Host" />,
+    cell: ({ row }) => <span className="font-mono text-xs">{row.original.host ?? ""}</span>,
+    size: 220,
+    minSize: 140,
+    meta: { label: "Host", parent: "url", order: 1 },
+  },
+  {
+    accessorKey: "path",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Path" />,
+    cell: ({ row }) => <span className="font-mono text-xs">{row.original.path ?? ""}</span>,
+    size: 220,
+    minSize: 140,
+    meta: { label: "Path", parent: "url", order: 2 },
+  },
+  {
+    accessorKey: "query",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Query" />,
+    cell: ({ row }) => <span className="font-mono text-xs">{row.original.query ?? ""}</span>,
+    size: 220,
+    minSize: 140,
+    meta: { label: "Query", parent: "url", order: 3 },
+  },
+  {
+    accessorKey: "client",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Client" />,
+    cell: ({ row }) => <span className="min-w-0 truncate">{row.original.client ?? ""}</span>,
     size: 180,
     minSize: 140,
+    meta: { label: "Client", order: 5 },
+  },
+  {
+    accessorKey: "method",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Method" />,
+    cell: ({ row }) => (
+      <Badge variant="outline" className="px-1.5 font-mono text-muted-foreground text-xs">
+        {row.original.method ?? ""}
+      </Badge>
+    ),
+    size: 120,
+    minSize: 110,
+    meta: { label: "Method", order: 6 },
   },
   {
     accessorKey: "status",
@@ -84,96 +169,151 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
         {row.original.status}
       </Badge>
     ),
+    size: 150,
+    minSize: 140,
+    meta: { label: "Status", order: 7 },
+  },
+  {
+    accessorKey: "code",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Code" />,
+    cell: ({ row }) => (
+      <Badge variant="outline" className="px-1.5 font-mono text-muted-foreground text-xs">
+        {(row.original.code ?? 0).toString()}
+      </Badge>
+    ),
+    size: 110,
+    minSize: 96,
+    meta: { label: "Code", order: 8 },
+  },
+  {
+    accessorKey: "date",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
+    cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{row.original.date ?? ""}</span>,
+    size: 130,
+    minSize: 120,
+    meta: { label: "Date", parent: "code", order: 1 },
+  },
+  {
+    accessorKey: "time",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Time" />,
+    cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{row.original.time ?? ""}</span>,
+    size: 120,
+    minSize: 110,
+    meta: { label: "Time", order: 9 },
+  },
+  {
+    accessorKey: "duration",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Duration" />,
+    cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{formatMs(row.original.duration)}</span>,
+    size: 140,
+    minSize: 120,
+    meta: { label: "Duration", order: 10 },
+  },
+  {
+    accessorKey: "timeComplete",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Time Complete" />,
+    cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{formatMs(row.original.timeComplete)}</span>,
     size: 160,
     minSize: 140,
+    meta: { label: "Time Complete", parent: "duration", order: 1 },
   },
   {
-    accessorKey: "target",
-    header: ({ column }) => <DataTableColumnHeader className="w-full" column={column} title="Target" />,
+    accessorKey: "requestTotalTime",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Request Total Time" />,
     cell: ({ row }) => (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
-            success: "Done",
-            error: "Error",
-          });
-        }}
-      >
-        <Label htmlFor={`${row.original.id}-target`} className="sr-only">
-          Target
-        </Label>
-        <Input
-          className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background dark:bg-transparent dark:focus-visible:bg-input/30 dark:hover:bg-input/30"
-          defaultValue={row.original.target}
-          id={`${row.original.id}-target`}
-        />
-      </form>
+      <span className="font-mono text-xs tabular-nums">{formatMs(row.original.requestTotalTime)}</span>
     ),
-    size: 96,
-    minSize: 80,
+    size: 190,
+    minSize: 160,
+    meta: { label: "Request Total Time", parent: "duration", order: 2 },
   },
   {
-    accessorKey: "limit",
-    header: ({ column }) => <DataTableColumnHeader className="w-full" column={column} title="Limit" />,
+    accessorKey: "responseTotalTime",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Response Total Time" />,
     cell: ({ row }) => (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
-            success: "Done",
-            error: "Error",
-          });
-        }}
-      >
-        <Label htmlFor={`${row.original.id}-limit`} className="sr-only">
-          Limit
-        </Label>
-        <Input
-          className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background dark:bg-transparent dark:focus-visible:bg-input/30 dark:hover:bg-input/30"
-          defaultValue={row.original.limit}
-          id={`${row.original.id}-limit`}
-        />
-      </form>
+      <span className="font-mono text-xs tabular-nums">{formatMs(row.original.responseTotalTime)}</span>
     ),
-    size: 96,
-    minSize: 80,
+    size: 200,
+    minSize: 170,
+    meta: { label: "Response Total Time", parent: "duration", order: 3 },
   },
   {
-    accessorKey: "reviewer",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Reviewer" />,
-    cell: ({ row }) => {
-      const isAssigned = row.original.reviewer !== "Assign reviewer";
-
-      if (isAssigned) {
-        return row.original.reviewer;
-      }
-
-      return (
-        <>
-          <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
-            Reviewer
-          </Label>
-          <Select>
-            <SelectTrigger
-              className="w-38 max-w-full **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
-              size="sm"
-              id={`${row.original.id}-reviewer`}
-            >
-              <SelectValue placeholder="Assign reviewer" />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
-              <SelectItem value="Jamik Tashpulatov">Jamik Tashpulatov</SelectItem>
-            </SelectContent>
-          </Select>
-        </>
-      );
-    },
+    accessorKey: "latency",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Latency" />,
+    cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{formatMs(row.original.latency)}</span>,
+    size: 140,
+    minSize: 120,
+    meta: { label: "Latency", parent: "duration", order: 4 },
+  },
+  {
+    accessorKey: "requestBodySize",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Request Body Size" />,
+    cell: ({ row }) => (
+      <span className="font-mono text-xs tabular-nums">{formatBytes(row.original.requestBodySize)}</span>
+    ),
+    size: 190,
+    minSize: 160,
+    meta: { label: "Request Body Size", order: 11 },
+  },
+  {
+    accessorKey: "responseBodySize",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Response Body Size" />,
+    cell: ({ row }) => (
+      <span className="font-mono text-xs tabular-nums">{formatBytes(row.original.responseBodySize)}</span>
+    ),
+    size: 200,
+    minSize: 170,
+    meta: { label: "Response Body Size", order: 12 },
+  },
+  {
+    accessorKey: "requestBodySizeCompressed",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Request Body Size (Compressed)" />,
+    cell: ({ row }) => (
+      <span className="font-mono text-xs tabular-nums">{formatBytes(row.original.requestBodySizeCompressed)}</span>
+    ),
+    size: 260,
+    minSize: 200,
+    meta: { label: "Request Body Size (Compressed)", parent: "responseBodySize", order: 1 },
+  },
+  {
+    accessorKey: "responseBodySizeCompressed",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Response Body Size (Compressed)" />,
+    cell: ({ row }) => (
+      <span className="font-mono text-xs tabular-nums">{formatBytes(row.original.responseBodySizeCompressed)}</span>
+    ),
+    size: 270,
+    minSize: 210,
+    meta: { label: "Response Body Size (Compressed)", parent: "responseBodySize", order: 2 },
+  },
+  {
+    accessorKey: "serverIpAddress",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Server IP Address" />,
+    cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{row.original.serverIpAddress ?? ""}</span>,
+    size: 200,
+    minSize: 170,
+    meta: { label: "Server IP Address", parent: "responseBodySize", order: 3 },
+  },
+  {
+    accessorKey: "edited",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Edited" />,
+    cell: ({ row }) => (
+      <div className="flex items-center justify-center">
+        {row.original.edited ? <CircleCheck className="size-4 text-muted-foreground" /> : null}
+      </div>
+    ),
+    size: 110,
+    minSize: 96,
+    meta: { label: "Edited", order: 13 },
+  },
+  {
+    accessorKey: "comment",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Comment" />,
+    cell: ({ row }) => (
+      <span className="min-w-0 truncate text-muted-foreground text-sm">{row.original.comment ?? ""}</span>
+    ),
     size: 220,
     minSize: 160,
+    meta: { label: "Comment", order: 14 },
   },
   {
     id: "actions",

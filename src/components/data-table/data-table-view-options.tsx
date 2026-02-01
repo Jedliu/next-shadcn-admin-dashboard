@@ -17,7 +17,7 @@ import {
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Table as TanStackTable } from "@tanstack/react-table";
+import type { Column, Table as TanStackTable } from "@tanstack/react-table";
 import { GripVertical, ListRestart, Settings2, SlidersHorizontal } from "lucide-react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
@@ -38,6 +38,23 @@ import { cn } from "@/lib/utils";
 
 interface DataTableViewOptionsProps<TData> {
   table: TanStackTable<TData>;
+}
+
+type ColumnTreeMeta = {
+  label?: string;
+  parent?: string;
+  order?: number;
+};
+
+function getColumnTreeMeta<TData>(column: Column<TData, unknown>) {
+  return (column.columnDef.meta ?? {}) as ColumnTreeMeta;
+}
+
+function getColumnLabel<TData>(column: Column<TData, unknown>) {
+  const meta = getColumnTreeMeta(column);
+  if (meta.label) return meta.label;
+  if (typeof column.columnDef.header === "string") return column.columnDef.header;
+  return column.id;
 }
 
 function ColumnOrderRow({ id, label }: { id: string; label: React.ReactNode }) {
@@ -139,92 +156,139 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
   }
 
   const canOrderColumns = getReorderableVisibleColumns().length > 1;
+  const toggleableColumns = table
+    .getAllColumns()
+    .filter((column) => typeof column.accessorFn !== "undefined" && column.getCanHide());
+
+  const toggleNodes = React.useMemo(() => {
+    const nodes = toggleableColumns.map((column, index) => {
+      const meta = getColumnTreeMeta(column);
+      return {
+        id: column.id,
+        parent: meta.parent,
+        order: meta.order ?? 0,
+        index,
+        label: getColumnLabel(column),
+        column,
+      };
+    });
+
+    const hasExplicitOrder = toggleableColumns.some((col) => typeof getColumnTreeMeta(col).order === "number");
+    const byId = new Map(nodes.map((n) => [n.id, n] as const));
+    const children = new Map<string, typeof nodes>();
+    for (const node of nodes) {
+      if (!node.parent) continue;
+      if (!byId.has(node.parent)) continue;
+      const next = children.get(node.parent) ?? [];
+      next.push(node);
+      children.set(node.parent, next);
+    }
+
+    const roots = nodes.filter((n) => !n.parent || !byId.has(n.parent));
+
+    const sortNodes = (a: (typeof nodes)[number], b: (typeof nodes)[number]) => {
+      if (hasExplicitOrder) {
+        if (a.order !== b.order) return a.order - b.order;
+        return a.index - b.index;
+      }
+      return a.index - b.index;
+    };
+
+    roots.sort(sortNodes);
+    for (const list of children.values()) list.sort(sortNodes);
+
+    return { roots, children };
+  }, [toggleableColumns]);
 
   return (
-    <>
-      <DropdownMenu
-        onOpenChange={(open) => {
-          if (!open) setOrderMenuOpen(false);
-        }}
-      >
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="ml-auto hidden h-8 lg:flex">
-            <Settings2 />
-            View
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[200px]">
-          <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {table
-            .getAllColumns()
-            .filter((column) => typeof column.accessorFn !== "undefined" && column.getCanHide())
-            .map((column) => {
-              return (
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (!open) setOrderMenuOpen(false);
+      }}
+    >
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="ml-auto hidden h-8 lg:flex">
+          <Settings2 />
+          View
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-[220px]">
+        <DropdownMenuLabel>Columns</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+
+        {(() => {
+          const renderNode = (node: (typeof toggleNodes.roots)[number], depth: number) => {
+            const padding = depth <= 0 ? undefined : depth === 1 ? "pl-12" : depth === 2 ? "pl-14" : "pl-16";
+            return (
+              <React.Fragment key={node.id}>
                 <DropdownMenuCheckboxItem
-                  key={column.id}
-                  className="capitalize"
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                  className={cn(padding)}
+                  checked={node.column.getIsVisible()}
+                  onCheckedChange={(value) => node.column.toggleVisibility(!!value)}
                   onSelect={(event) => event.preventDefault()}
                 >
-                  {column.id}
+                  {node.label}
                 </DropdownMenuCheckboxItem>
-              );
-            })}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={() => {
-              handleResetColumns();
-            }}
+                {(toggleNodes.children.get(node.id) ?? []).map((child) => renderNode(child, depth + 1))}
+              </React.Fragment>
+            );
+          };
+
+          return toggleNodes.roots.map((node) => renderNode(node, 0));
+        })()}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={() => {
+            handleResetColumns();
+          }}
+        >
+          <ListRestart className="size-4 text-muted-foreground" />
+          Reset columns
+        </DropdownMenuItem>
+        <DropdownMenuSub open={orderMenuOpen} onOpenChange={setOrderMenuOpen}>
+          <DropdownMenuSubTrigger disabled={!canOrderColumns}>
+            <SlidersHorizontal className="size-4 text-muted-foreground" />
+            Order columns
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPrimitive.SubContent
+            sideOffset={8}
+            className={cn(
+              "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-50 w-52 max-h-[calc(100svh-2rem)] overflow-hidden rounded-md border shadow-lg",
+            )}
           >
-            <ListRestart className="size-4 text-muted-foreground" />
-            Reset columns
-          </DropdownMenuItem>
-          <DropdownMenuSub open={orderMenuOpen} onOpenChange={setOrderMenuOpen}>
-            <DropdownMenuSubTrigger disabled={!canOrderColumns}>
-              <SlidersHorizontal className="size-4 text-muted-foreground" />
-              Order columns
-            </DropdownMenuSubTrigger>
-            <DropdownMenuPrimitive.SubContent
-              sideOffset={8}
-              className={cn(
-                "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-50 w-52 max-h-[calc(100svh-2rem)] overflow-hidden rounded-md border shadow-lg",
+            <div className="border-b px-4 py-3">
+              <div className="text-sm font-medium">Drag to order</div>
+            </div>
+            <div className="flex min-h-0 flex-col gap-2 overflow-y-auto px-4 py-3 text-sm">
+              {columnIds.length === 0 ? (
+                <div className="text-muted-foreground">No reorderable columns.</div>
+              ) : (
+                <DndContext
+                  collisionDetection={closestCenter}
+                  modifiers={[restrictToVerticalAxis]}
+                  onDragOver={handleDragOver}
+                  onDragStart={() => setIsDragging(true)}
+                  onDragEnd={handleDragEnd}
+                  onDragCancel={() => setIsDragging(false)}
+                  sensors={sensors}
+                  id={sortableId}
+                >
+                  <Table className="table-fixed">
+                    <TableBody className="[&_tr]:border-border">
+                      <SortableContext items={columnIds} strategy={verticalListSortingStrategy}>
+                        {columnIds.map((id) => (
+                          <ColumnOrderRow key={id} id={id} label={id} />
+                        ))}
+                      </SortableContext>
+                    </TableBody>
+                  </Table>
+                </DndContext>
               )}
-            >
-              <div className="border-b px-4 py-3">
-                <div className="text-sm font-medium">Drag to order</div>
-              </div>
-              <div className="flex min-h-0 flex-col gap-2 overflow-y-auto px-4 py-3 text-sm">
-                {columnIds.length === 0 ? (
-                  <div className="text-muted-foreground">No reorderable columns.</div>
-                ) : (
-                  <DndContext
-                    collisionDetection={closestCenter}
-                    modifiers={[restrictToVerticalAxis]}
-                    onDragOver={handleDragOver}
-                    onDragStart={() => setIsDragging(true)}
-                    onDragEnd={handleDragEnd}
-                    onDragCancel={() => setIsDragging(false)}
-                    sensors={sensors}
-                    id={sortableId}
-                  >
-                    <Table className="table-fixed">
-                      <TableBody className="[&_tr]:border-border">
-                        <SortableContext items={columnIds} strategy={verticalListSortingStrategy}>
-                          {columnIds.map((id) => (
-                            <ColumnOrderRow key={id} id={id} label={id} />
-                          ))}
-                        </SortableContext>
-                      </TableBody>
-                    </Table>
-                  </DndContext>
-                )}
-              </div>
-            </DropdownMenuPrimitive.SubContent>
-          </DropdownMenuSub>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </>
+            </div>
+          </DropdownMenuPrimitive.SubContent>
+        </DropdownMenuSub>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

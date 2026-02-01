@@ -305,7 +305,7 @@ function TableCellViewerBody({
   );
 }
 
-export function TableCellViewer({ item }: { item: ViewerItem }) {
+export function TableCellViewer({ item, label }: { item: ViewerItem; label?: React.ReactNode }) {
   const { setItem, setOpen } = useTableCellViewer();
 
   return (
@@ -317,7 +317,7 @@ export function TableCellViewer({ item }: { item: ViewerItem }) {
         setOpen(true);
       }}
     >
-      <span className="min-w-0 flex-1 truncate">{item.header}</span>
+      <span className="min-w-0 flex-1 truncate">{label ?? item.header}</span>
     </Button>
   );
 }
