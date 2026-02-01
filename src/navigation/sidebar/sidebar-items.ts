@@ -1,12 +1,15 @@
-import { Fingerprint, LayoutDashboard, type LucideIcon } from "lucide-react";
+import { Fingerprint, History, LayoutDashboard, type LucideIcon } from "lucide-react";
 
 import { proxyNavItem } from "@/navigation/proxy/proxy-nav";
 import { settingsNavItem } from "@/navigation/settings/settings-nav";
+
+export type NavAction = "quick-create";
 
 export interface NavSubItem {
   title: string;
   url: string;
   icon?: LucideIcon;
+  action?: NavAction;
   comingSoon?: boolean;
   newTab?: boolean;
   isNew?: boolean;
@@ -17,6 +20,7 @@ export interface NavMainItem {
   url: string;
   icon?: LucideIcon;
   subItems?: NavSubItem[];
+  action?: NavAction;
   comingSoon?: boolean;
   newTab?: boolean;
   isNew?: boolean;
@@ -37,6 +41,12 @@ export const sidebarItems: NavGroup[] = [
         title: "Workbench",
         url: "/dashboard/workbench",
         icon: LayoutDashboard,
+      },
+      {
+        title: "History",
+        url: "/dashboard/workbench/history",
+        icon: History,
+        action: "quick-create",
       },
     ],
   },
