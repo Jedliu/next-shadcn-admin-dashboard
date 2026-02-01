@@ -772,15 +772,19 @@ function FiltersPanelDrawer({
 
 export function DataTable({ data: initialData }: { data: z.infer<typeof sectionSchema>[] }) {
   const [data, setData] = React.useState<z.infer<typeof sectionSchema>[]>(() => {
-    const now = Date.now();
+    // IMPORTANT: Keep derived demo fields deterministic to avoid SSR hydration mismatches.
+    // - Don't use Date.now()/Math.random()
+    // - Don't use locale/timezone dependent formatting like toTimeString()
+    const baseTs = Date.parse("2026-02-01T12:00:00.000Z");
     return initialData.map((row, index): z.infer<typeof sectionSchema> => {
       const id = row.id;
       const ssl = id % 2 === 0;
       const method = id % 3 === 0 ? "POST" : "GET";
       const code = [200, 204, 301, 304, 400, 401, 403, 404, 500][id % 9] ?? 200;
-      const ts = new Date(now - (index * 7 + id) * 60_000);
-      const date = ts.toISOString().slice(0, 10);
-      const time = ts.toTimeString().slice(0, 8);
+      const ts = new Date(baseTs - (index * 7 + id) * 60_000);
+      const iso = ts.toISOString();
+      const date = iso.slice(0, 10);
+      const time = iso.slice(11, 19);
       const host = "api.studio-admin.dev";
       const path = `/v1/items/${id}`;
       const query = `q=${encodeURIComponent(row.header)}`;
