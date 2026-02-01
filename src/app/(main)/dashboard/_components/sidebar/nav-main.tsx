@@ -34,10 +34,19 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import type { NavAction, NavGroup, NavMainItem } from "@/navigation/sidebar/sidebar-items";
+import type { NavGroup, NavMainItem } from "@/navigation/sidebar/sidebar-items";
 
 interface NavMainProps {
   readonly items: readonly NavGroup[];
+}
+
+// Local action union to avoid TS server cache issues with type exports.
+type NavAction = "quick-create" | "history";
+
+function readNavAction(value: unknown): NavAction | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const action = (value as { action?: unknown }).action;
+  return action === "quick-create" || action === "history" ? action : undefined;
 }
 
 const IsComingSoon = () => (
@@ -55,6 +64,7 @@ const NavItemExpanded = ({
   isSubmenuOpen: (subItems?: NavMainItem["subItems"]) => boolean;
   onSubItemAction: (action: NavAction) => void;
 }) => {
+  const itemAction = readNavAction(item);
   return (
     <Collapsible key={item.title} asChild defaultOpen={isSubmenuOpen(item.subItems)} className="group/collapsible">
       <SidebarMenuItem>
@@ -80,17 +90,17 @@ const NavItemExpanded = ({
           </>
         ) : (
           <SidebarMenuButton
-            aria-disabled={!item.action ? item.comingSoon : undefined}
-            disabled={item.action ? item.comingSoon : undefined}
+            aria-disabled={!itemAction ? item.comingSoon : undefined}
+            disabled={itemAction ? item.comingSoon : undefined}
             isActive={isActive(item.url)}
             tooltip={item.title}
             onClick={() => {
-              if (!item.action) return;
-              onSubItemAction(item.action);
+              if (!itemAction) return;
+              onSubItemAction(itemAction);
             }}
-            asChild={!item.action}
+            asChild={!itemAction}
           >
-            {item.action ? (
+            {itemAction ? (
               <>
                 {item.icon && <item.icon />}
                 <span>{item.title}</span>
@@ -110,12 +120,12 @@ const NavItemExpanded = ({
             <SidebarMenuSub>
               {item.subItems.map((subItem) => (
                 <SidebarMenuSubItem key={subItem.title}>
-                  {subItem.action ? (
+                  {readNavAction(subItem) ? (
                     <SidebarMenuSubButton asChild aria-disabled={subItem.comingSoon} isActive={false}>
                       <button
                         type="button"
                         onClick={() => {
-                          const action = subItem.action;
+                          const action = readNavAction(subItem);
                           if (!action) return;
                           onSubItemAction(action);
                         }}
@@ -173,13 +183,14 @@ const NavItemCollapsed = ({
             <DropdownMenuItem
               key={subItem.title}
               onSelect={(e) => {
-                if (!subItem.action) return;
+                const action = readNavAction(subItem);
+                if (!action) return;
                 e.preventDefault();
-                onSubItemAction(subItem.action);
+                onSubItemAction(action);
               }}
               className="p-0"
             >
-              {subItem.action ? (
+              {readNavAction(subItem) ? (
                 <SidebarMenuSubButton
                   asChild
                   className="focus-visible:ring-0"
@@ -496,7 +507,8 @@ export function NavMain({ items }: NavMainProps) {
                 if (state === "collapsed" && !isMobile) {
                   // If no subItems, just render the button as a link
                   if (!item.subItems) {
-                    if (item.action) {
+                    const action = readNavAction(item);
+                    if (action) {
                       return (
                         <SidebarMenuItem key={item.title}>
                           <SidebarMenuButton
@@ -504,8 +516,6 @@ export function NavMain({ items }: NavMainProps) {
                             tooltip={item.title}
                             isActive={false}
                             onClick={() => {
-                              const action = item.action;
-                              if (!action) return;
                               onSubItemAction(action);
                             }}
                           >
