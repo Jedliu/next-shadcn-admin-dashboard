@@ -19,6 +19,8 @@ import {
   Users,
 } from "lucide-react";
 
+import { proxyNavItem } from "@/navigation/proxy/proxy-nav";
+
 export interface NavSubItem {
   title: string;
   url: string;
@@ -158,6 +160,7 @@ export const sidebarItems: NavGroup[] = [
     id: 3,
     label: "Misc",
     items: [
+      proxyNavItem,
       {
         title: "Settings",
         url: "/dashboard/settings",
