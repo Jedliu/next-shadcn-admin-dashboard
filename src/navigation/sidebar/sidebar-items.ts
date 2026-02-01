@@ -1,4 +1,4 @@
-import { Fingerprint, History, LayoutDashboard, type LucideIcon } from "lucide-react";
+import { Fingerprint, History, LayoutDashboard, type LucideIcon, Puzzle } from "lucide-react";
 
 import { proxyNavItem } from "@/navigation/proxy/proxy-nav";
 import { settingsNavItem } from "@/navigation/settings/settings-nav";
@@ -47,6 +47,11 @@ export const sidebarItems: NavGroup[] = [
         url: "/dashboard/workbench/history",
         icon: History,
         action: "quick-create",
+      },
+      {
+        title: "Plugins",
+        url: "/dashboard/plugins",
+        icon: Puzzle,
       },
     ],
   },
