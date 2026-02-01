@@ -117,7 +117,7 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
     <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", className)}>
       <div className="border-b bg-background/95 p-3">
         <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 size-4 text-muted-foreground" />
           <Input
             value={historySearch}
             onChange={(e) => setHistorySearch(e.target.value)}
@@ -153,73 +153,54 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
           visibleItems.map((item) => {
             const selected = historySelectedId === item.id;
             return (
-              <button
+              <div
                 key={item.id}
-                type="button"
                 className={cn(
                   "group flex w-full items-start gap-3 border-b px-3 py-3 text-left text-sm transition-colors hover:bg-muted/30",
                   selected && "bg-muted/40",
                 )}
-                onClick={() => setHistorySelectedId(item.id)}
               >
-                <div className="mt-1 shrink-0">{kindIcon(item.kind)}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="min-w-0 truncate font-normal">{item.title}</div>
-                  <div className="mt-1 flex items-center gap-2 text-muted-foreground text-sm">
-                    <Clock className="size-4" />
-                    <span className="font-mono tabular-nums">{item.timestamp}</span>
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                  onClick={() => setHistorySelectedId(item.id)}
+                >
+                  <div className="mt-1 shrink-0">{kindIcon(item.kind)}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="min-w-0 truncate font-normal">{item.title}</div>
+                    <div className="mt-1 flex items-center gap-2 text-muted-foreground text-sm">
+                      <Clock className="size-4" />
+                      <span className="font-mono tabular-nums">{item.timestamp}</span>
+                    </div>
                   </div>
-                </div>
+                </button>
+
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Database className="size-4" />
                     <span className="font-mono tabular-nums">{item.records}</span>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                      title="Copy"
-                    >
+                    <Button type="button" variant="ghost" size="icon-sm" title="Copy">
                       <Copy className="size-4" />
                       <span className="sr-only">Copy</span>
                     </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                      title="Rename"
-                    >
+                    <Button type="button" variant="ghost" size="icon-sm" title="Rename">
                       <Pencil className="size-4" />
                       <span className="sr-only">Rename</span>
                     </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                      title="Delete"
-                    >
+                    <Button type="button" variant="ghost" size="icon-sm" title="Delete">
                       <Trash2 className="size-4" />
                       <span className="sr-only">Delete</span>
                     </Button>
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })
         ) : (
           <div className="flex flex-col items-center justify-center gap-2 p-8 text-center">
-            <div className="text-sm font-medium">No history found</div>
+            <div className="font-medium text-sm">No history found</div>
             <div className="text-muted-foreground text-sm">Try changing the filter or search query.</div>
           </div>
         )}

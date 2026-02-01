@@ -28,34 +28,53 @@ type QuickCreateContextValue = {
 const QuickCreateContext = React.createContext<QuickCreateContextValue | null>(null);
 
 export function QuickCreateProvider({ children }: { readonly children: React.ReactNode }) {
-  const [open, setOpen] = React.useState(false);
+  const [panelState, setPanelState] = React.useState<{ open: boolean; panel: "quick-create" | "history" }>({
+    open: false,
+    panel: "quick-create",
+  });
   const [pinned, setPinned] = React.useState(false);
   const [panelWidth, setPanelWidth] = React.useState(352); // 22rem
-  const [panel, setPanel] = React.useState<"quick-create" | "history">("quick-create");
   const [testInputValue, setTestInputValue] = React.useState("");
   const [historyTab, setHistoryTab] = React.useState<"all" | "manual" | "auto">("all");
   const [historySearch, setHistorySearch] = React.useState("");
   const [historySelectedId, setHistorySelectedId] = React.useState<string | null>(null);
 
+  const open = panelState.open;
+  const panel = panelState.panel;
+
+  const setOpen: React.Dispatch<React.SetStateAction<boolean>> = React.useCallback((next) => {
+    setPanelState((prev) => ({
+      ...prev,
+      open: typeof next === "function" ? (next as (p: boolean) => boolean)(prev.open) : next,
+    }));
+  }, []);
+
+  const setPanel: React.Dispatch<React.SetStateAction<"quick-create" | "history">> = React.useCallback((next) => {
+    setPanelState((prev) => ({
+      ...prev,
+      panel: typeof next === "function" ? (next as (p: typeof prev.panel) => typeof prev.panel)(prev.panel) : next,
+    }));
+  }, []);
+
   const toggleOpen = React.useCallback(() => {
-    setOpen((prev) => !prev);
+    setPanelState((prev) => ({ ...prev, open: !prev.open }));
   }, []);
 
   const togglePinned = React.useCallback(() => {
     setPinned((prev) => !prev);
     setOpen(true);
-  }, []);
+  }, [setOpen]);
 
   const openPanel = React.useCallback((nextPanel: "quick-create" | "history") => {
-    setPanel(nextPanel);
-    setOpen(true);
+    setPanelState((prev) => ({ ...prev, panel: nextPanel, open: true }));
   }, []);
 
   const togglePanel = React.useCallback((nextPanel: "quick-create" | "history") => {
-    setPanel((prevPanel) => {
-      setOpen((prevOpen) => (prevOpen && prevPanel === nextPanel ? false : true));
-      return nextPanel;
-    });
+    setPanelState((prev) => ({
+      ...prev,
+      panel: nextPanel,
+      open: !(prev.open && prev.panel === nextPanel),
+    }));
   }, []);
 
   const value = React.useMemo(
@@ -90,6 +109,8 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
       historyTab,
       historySearch,
       historySelectedId,
+      setOpen,
+      setPanel,
       toggleOpen,
       togglePinned,
       openPanel,

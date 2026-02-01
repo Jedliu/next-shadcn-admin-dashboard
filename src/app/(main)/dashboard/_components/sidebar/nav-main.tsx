@@ -34,7 +34,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import type { NavAction, NavGroup, NavMainItem, NavSubItem } from "@/navigation/sidebar/sidebar-items";
+import type { NavAction, NavGroup, NavMainItem } from "@/navigation/sidebar/sidebar-items";
 
 interface NavMainProps {
   readonly items: readonly NavGroup[];
@@ -114,7 +114,11 @@ const NavItemExpanded = ({
                     <SidebarMenuSubButton asChild aria-disabled={subItem.comingSoon} isActive={false}>
                       <button
                         type="button"
-                        onClick={() => onSubItemAction(subItem.action!)}
+                        onClick={() => {
+                          const action = subItem.action;
+                          if (!action) return;
+                          onSubItemAction(action);
+                        }}
                         disabled={subItem.comingSoon}
                       >
                         {subItem.icon && <subItem.icon />}
@@ -182,11 +186,11 @@ const NavItemCollapsed = ({
                   aria-disabled={subItem.comingSoon}
                   isActive={false}
                 >
-                  <button type="button" disabled={subItem.comingSoon} onClick={() => onSubItemAction(subItem.action!)}>
+                  <div>
                     {subItem.icon && <subItem.icon className="[&>svg]:text-sidebar-foreground" />}
                     <span>{subItem.title}</span>
                     {subItem.comingSoon && <IsComingSoon />}
-                  </button>
+                  </div>
                 </SidebarMenuSubButton>
               ) : (
                 <SidebarMenuSubButton
@@ -288,6 +292,15 @@ export function NavMain({ items }: NavMainProps) {
     if (isMobile) return;
     setPortalTarget(document.body);
   }, [isMobile]);
+
+  React.useEffect(() => {
+    if (isMobile || quickCreateOpen) return;
+    const flyout = document.querySelector<HTMLElement>('[data-slot="quick-create-flyout"]');
+    const active = document.activeElement as HTMLElement | null;
+    if (flyout && active && flyout.contains(active)) {
+      active.blur();
+    }
+  }, [isMobile, quickCreateOpen]);
 
   React.useEffect(() => {
     if (!isMobile) return;
@@ -420,8 +433,8 @@ export function NavMain({ items }: NavMainProps) {
                 }}
               >
                 <div className="absolute inset-y-0 right-0 w-px bg-border" />
-                <div className="pointer-events-none absolute top-1/2 right-0 -translate-y-1/2 -translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                  <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background shadow-sm">
+                <div className="-translate-x-0.5 -translate-y-1/2 pointer-events-none absolute top-1/2 right-0 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background bg-border shadow-sm">
                     <GripVerticalIcon className="size-2.5" />
                   </div>
                 </div>
@@ -433,7 +446,7 @@ export function NavMain({ items }: NavMainProps) {
                 )}
               >
                 <div className="min-w-0">
-                  <h2 className={cn("truncate", panel === "history" ? "text-sm font-medium" : "font-semibold")}>
+                  <h2 className={cn("truncate", panel === "history" ? "font-medium text-sm" : "font-semibold")}>
                     {panel === "history" ? "History" : "Quick Create"}
                   </h2>
                   {panel === "history" ? null : (
@@ -490,7 +503,11 @@ export function NavMain({ items }: NavMainProps) {
                             disabled={item.comingSoon}
                             tooltip={item.title}
                             isActive={false}
-                            onClick={() => onSubItemAction(item.action!)}
+                            onClick={() => {
+                              const action = item.action;
+                              if (!action) return;
+                              onSubItemAction(action);
+                            }}
                           >
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>

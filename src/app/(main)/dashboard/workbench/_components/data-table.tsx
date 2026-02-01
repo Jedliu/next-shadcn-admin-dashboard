@@ -174,7 +174,7 @@ function ValuesPicker({
               <button
                 key={opt.value}
                 type="button"
-                className="hover:bg-muted flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
                 onClick={() => {
                   if (checked) {
                     onChange(values.filter((v) => v !== opt.value));
@@ -219,7 +219,7 @@ function FiltersBuilder({
     <div className="flex max-h-[calc(var(--radix-popover-content-available-height)-0.75rem)] w-[44rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg">
       <div className="flex items-center justify-between gap-4 border-b bg-muted/40 px-3 py-2">
         <div className="flex items-center gap-2">
-          <div className="text-sm font-medium">Filters</div>
+          <div className="font-medium text-sm">Filters</div>
           {totalActiveConditions > 0 ? <Badge variant="secondary">{totalActiveConditions}</Badge> : null}
         </div>
       </div>
@@ -659,25 +659,27 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
               className="@4xl/main:flex hidden w-full justify-start **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:px-1"
             >
               {tabs.map((tab) => (
-                <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
-                  <span>{tab.label}</span>
-                  {tab.badge ? <Badge variant="secondary">{tab.badge}</Badge> : null}
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:text-foreground inline-flex size-5 cursor-pointer items-center justify-center rounded-sm opacity-70 transition-opacity hover:opacity-100"
-                    onPointerDown={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                    }}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleRemoveTab(tab.value);
-                    }}
-                    aria-label={`Remove ${tab.label}`}
-                    disabled={tabs.length <= 1}
-                  >
-                    <XIcon className="size-3.5" />
-                  </button>
+                <TabsTrigger key={tab.value} value={tab.value} className="gap-2" asChild>
+                  <div className="flex items-center gap-2">
+                    <span>{tab.label}</span>
+                    {tab.badge ? <Badge variant="secondary">{tab.badge}</Badge> : null}
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground inline-flex size-5 cursor-pointer items-center justify-center rounded-sm opacity-70 transition-opacity hover:opacity-100"
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleRemoveTab(tab.value);
+                      }}
+                      aria-label={`Remove ${tab.label}`}
+                      disabled={tabs.length <= 1}
+                    >
+                      <XIcon className="size-3.5" />
+                    </button>
+                  </div>
                 </TabsTrigger>
               ))}
             </TabsList>

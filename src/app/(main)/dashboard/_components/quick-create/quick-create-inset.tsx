@@ -63,8 +63,8 @@ export function QuickCreateInset({ children }: { readonly children: React.ReactN
               }}
             >
               <div className="absolute inset-y-0 right-0 w-px bg-border" />
-              <div className="pointer-events-none absolute top-1/2 right-0 -translate-y-1/2 -translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background shadow-sm">
+              <div className="-translate-x-0.5 -translate-y-1/2 pointer-events-none absolute top-1/2 right-0 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background bg-border shadow-sm">
                   <GripVerticalIcon className="size-2.5" />
                 </div>
               </div>
@@ -76,7 +76,7 @@ export function QuickCreateInset({ children }: { readonly children: React.ReactN
               )}
             >
               <div className="min-w-0">
-                <h2 className={cn("truncate", panel === "history" ? "text-sm font-medium" : "font-semibold")}>
+                <h2 className={cn("truncate", panel === "history" ? "font-medium text-sm" : "font-semibold")}>
                   {panel === "history" ? "History" : "Quick Create"}
                 </h2>
                 {panel === "history" ? null : (
