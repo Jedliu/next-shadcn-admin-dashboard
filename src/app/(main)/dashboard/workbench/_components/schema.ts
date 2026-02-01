@@ -25,8 +25,6 @@ export const sectionSchema = z.object({
   latency: z.number().optional(),
   requestBodySize: z.number().optional(),
   responseBodySize: z.number().optional(),
-  requestBodySizeCompressed: z.number().optional(),
-  responseBodySizeCompressed: z.number().optional(),
   serverIpAddress: z.string().optional(),
   edited: z.boolean().optional(),
   comment: z.string().optional(),

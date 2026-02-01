@@ -266,32 +266,12 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     meta: { label: "Response Body Size", order: 12 },
   },
   {
-    accessorKey: "requestBodySizeCompressed",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Request Body Size (Compressed)" />,
-    cell: ({ row }) => (
-      <span className="font-mono text-xs tabular-nums">{formatBytes(row.original.requestBodySizeCompressed)}</span>
-    ),
-    size: 260,
-    minSize: 200,
-    meta: { label: "Request Body Size (Compressed)", parent: "responseBodySize", order: 1 },
-  },
-  {
-    accessorKey: "responseBodySizeCompressed",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Response Body Size (Compressed)" />,
-    cell: ({ row }) => (
-      <span className="font-mono text-xs tabular-nums">{formatBytes(row.original.responseBodySizeCompressed)}</span>
-    ),
-    size: 270,
-    minSize: 210,
-    meta: { label: "Response Body Size (Compressed)", parent: "responseBodySize", order: 2 },
-  },
-  {
     accessorKey: "serverIpAddress",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Server IP Address" />,
     cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{row.original.serverIpAddress ?? ""}</span>,
     size: 200,
     minSize: 170,
-    meta: { label: "Server IP Address", parent: "responseBodySize", order: 3 },
+    meta: { label: "Server IP Address", parent: "responseBodySize", order: 1 },
   },
   {
     accessorKey: "edited",

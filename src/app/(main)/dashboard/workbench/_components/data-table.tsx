@@ -30,8 +30,6 @@ import type { sectionSchema } from "./schema";
 import { TableCellViewerDrawer, TableCellViewerInset, TableCellViewerProvider } from "./table-cell-viewer";
 
 type FacetFilters = {
-  protocol?: string[];
-  httpVersion?: string[];
   format?: string[];
   status?: string[];
 };
@@ -61,23 +59,6 @@ const FILTER_FIELD_DEFS: Array<{
   label: string;
   options: Array<{ label: string; value: string }>;
 }> = [
-  {
-    key: "protocol",
-    label: "Protocol",
-    options: [
-      { label: "Http", value: "Http" },
-      { label: "Https", value: "Https" },
-      { label: "Websocket", value: "Websocket" },
-    ],
-  },
-  {
-    key: "httpVersion",
-    label: "HTTP Version",
-    options: [
-      { label: "HTTP1", value: "HTTP1" },
-      { label: "HTTP2", value: "HTTP2" },
-    ],
-  },
   {
     key: "format",
     label: "Format",
@@ -796,8 +777,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
       const timeComplete = duration + latency;
       const requestBodySize = 300 + (id % 13) * 97;
       const responseBodySize = 900 + (id % 17) * 131;
-      const requestBodySizeCompressed = Math.round(requestBodySize * 0.62);
-      const responseBodySizeCompressed = Math.round(responseBodySize * 0.58);
       const serverIpAddress = `10.0.${id % 10}.${(id % 240) + 10}`;
       const edited = id % 5 === 0;
       const client = row.reviewer;
@@ -821,8 +800,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
         timeComplete,
         requestBodySize,
         responseBodySize,
-        requestBodySizeCompressed,
-        responseBodySizeCompressed,
         serverIpAddress,
         edited,
         client,
@@ -845,8 +822,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
       requestTotalTime: false,
       responseTotalTime: false,
       latency: false,
-      requestBodySizeCompressed: false,
-      responseBodySizeCompressed: false,
       serverIpAddress: false,
     },
     getRowId: (row) => row.id.toString(),
@@ -864,8 +839,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
       join: "all",
       conditionsJoin: "all",
       conditions: [
-        { id: newId("cond"), field: "protocol", operator: "in", values: ["Https"] },
-        { id: newId("cond"), field: "httpVersion", operator: "in", values: ["HTTP2"] },
         { id: newId("cond"), field: "format", operator: "in", values: ["HTML"] },
         { id: newId("cond"), field: "status", operator: "in", values: ["2xx"] },
       ],
@@ -1048,25 +1021,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                   </Field>
                 </FieldLabel>
                 <div className="h-6 w-px bg-border" />
-                <DataTableFacetedFilter
-                  title="Protocol"
-                  options={[
-                    { label: "Http", value: "Http" },
-                    { label: "Https", value: "Https" },
-                    { label: "Websocket", value: "Websocket" },
-                  ]}
-                  values={facetFilters.protocol}
-                  onChange={(value) => setFacetFilter("protocol", value)}
-                />
-                <DataTableFacetedFilter
-                  title="HTTP Version"
-                  options={[
-                    { label: "HTTP1", value: "HTTP1" },
-                    { label: "HTTP2", value: "HTTP2" },
-                  ]}
-                  values={facetFilters.httpVersion}
-                  onChange={(value) => setFacetFilter("httpVersion", value)}
-                />
                 <DataTableFacetedFilter
                   title="Format"
                   options={[
