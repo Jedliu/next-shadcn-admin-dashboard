@@ -112,6 +112,33 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     minSize: 160,
     meta: { label: "URL", order: 4 },
   },
+  // Hidden filter-only fields (kept out of the column picker).
+  {
+    accessorKey: "format",
+    header: () => null,
+    cell: () => null,
+    enableHiding: false,
+    enableResizing: false,
+    enableSorting: false,
+    filterFn: (row, id, value) => {
+      if (!Array.isArray(value) || value.length === 0) return true;
+      const v = row.getValue<string | undefined>(id) ?? "";
+      return value.includes(v);
+    },
+  },
+  {
+    accessorKey: "statusGroup",
+    header: () => null,
+    cell: () => null,
+    enableHiding: false,
+    enableResizing: false,
+    enableSorting: false,
+    filterFn: (row, id, value) => {
+      if (!Array.isArray(value) || value.length === 0) return true;
+      const v = row.getValue<string | undefined>(id) ?? "";
+      return value.includes(v);
+    },
+  },
   {
     accessorKey: "host",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Host" />,
@@ -119,6 +146,11 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     size: 220,
     minSize: 140,
     meta: { label: "Host", parent: "url", order: 1 },
+    filterFn: (row, id, value) => {
+      if (!Array.isArray(value) || value.length === 0) return true;
+      const v = row.getValue<string | undefined>(id) ?? "";
+      return value.includes(v);
+    },
   },
   {
     accessorKey: "path",
@@ -140,9 +172,15 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     accessorKey: "client",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Client" />,
     cell: ({ row }) => <span className="min-w-0 truncate">{row.original.client ?? ""}</span>,
-    size: 180,
-    minSize: 140,
+    size: 140,
+    minSize: 110,
+    maxSize: 180,
     meta: { label: "Client", order: 5 },
+    filterFn: (row, id, value) => {
+      if (!Array.isArray(value) || value.length === 0) return true;
+      const v = row.getValue<string | undefined>(id) ?? "";
+      return value.includes(v);
+    },
   },
   {
     accessorKey: "method",

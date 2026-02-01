@@ -3,7 +3,7 @@
 
 import * as React from "react";
 
-import { Copy, GripVerticalIcon, ListFilterPlus, Plus, Trash2, XIcon } from "lucide-react";
+import { Copy, GripVerticalIcon, ListFilterPlus, Plus, Search, Trash2, XIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { z } from "zod";
 
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Field, FieldLabel, FieldTitle } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,8 +31,10 @@ import type { sectionSchema } from "./schema";
 import { TableCellViewerDrawer, TableCellViewerInset, TableCellViewerProvider } from "./table-cell-viewer";
 
 type FacetFilters = {
+  client?: string[];
+  host?: string[];
   format?: string[];
-  status?: string[];
+  statusGroup?: string[];
 };
 
 type FilterFieldKey = keyof FacetFilters;
@@ -54,11 +57,30 @@ type FilterGroup = {
   conditions: FilterCondition[];
 };
 
+const CLIENT_OPTIONS = [
+  { label: "Eddie Lake", value: "Eddie Lake" },
+  { label: "Jamik Tashpulatov", value: "Jamik Tashpulatov" },
+  { label: "Sarah Johnson", value: "Sarah Johnson" },
+  { label: "Assign reviewer", value: "Assign reviewer" },
+] as const;
+
+const HOST_OPTIONS = [{ label: "api.studio-admin.dev", value: "api.studio-admin.dev" }] as const;
+
 const FILTER_FIELD_DEFS: Array<{
   key: FilterFieldKey;
   label: string;
   options: Array<{ label: string; value: string }>;
 }> = [
+  {
+    key: "client",
+    label: "Client",
+    options: [...CLIENT_OPTIONS],
+  },
+  {
+    key: "host",
+    label: "Host",
+    options: [...HOST_OPTIONS],
+  },
   {
     key: "format",
     label: "Format",
@@ -75,7 +97,7 @@ const FILTER_FIELD_DEFS: Array<{
     ],
   },
   {
-    key: "status",
+    key: "statusGroup",
     label: "Status",
     options: [
       { label: "1xx", value: "1xx" },
@@ -757,11 +779,13 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     // - Don't use Date.now()/Math.random()
     // - Don't use locale/timezone dependent formatting like toTimeString()
     const baseTs = Date.parse("2026-02-01T12:00:00.000Z");
+    const formats = ["HTML", "JSON", "XML", "Text", "JS", "CSS", "Image", "Media", "Binary"] as const;
     return initialData.map((row, index): z.infer<typeof sectionSchema> => {
       const id = row.id;
       const ssl = id % 2 === 0;
       const method = id % 3 === 0 ? "POST" : "GET";
       const code = [200, 204, 301, 304, 400, 401, 403, 404, 500][id % 9] ?? 200;
+      const statusGroup = `${Math.floor(code / 100)}xx`;
       const ts = new Date(baseTs - (index * 7 + id) * 60_000);
       const iso = ts.toISOString();
       const date = iso.slice(0, 10);
@@ -770,6 +794,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
       const path = `/v1/items/${id}`;
       const query = `q=${encodeURIComponent(row.header)}`;
       const url = `https://${host}${path}?${query}`;
+      const format = formats[id % formats.length] ?? "HTML";
       const duration = 120 + (id % 9) * 37;
       const latency = 20 + (id % 7) * 9;
       const requestTotalTime = Math.round(duration * 0.45);
@@ -793,6 +818,8 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
         host,
         path,
         query,
+        format,
+        statusGroup,
         duration,
         latency,
         requestTotalTime,
@@ -814,10 +841,12 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     data,
     columns,
     defaultColumnVisibility: {
+      format: false,
       host: false,
       path: false,
       query: false,
       date: false,
+      statusGroup: false,
       timeComplete: false,
       requestTotalTime: false,
       responseTotalTime: false,
@@ -840,13 +869,14 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
       conditionsJoin: "all",
       conditions: [
         { id: newId("cond"), field: "format", operator: "in", values: ["HTML"] },
-        { id: newId("cond"), field: "status", operator: "in", values: ["2xx"] },
+        { id: newId("cond"), field: "statusGroup", operator: "in", values: ["2xx"] },
       ],
     },
   ]);
   const [filtersEnabled, setFiltersEnabled] = React.useState(true);
   const [filtersPanelOpen, setFiltersPanelOpen] = React.useState(false);
   const [filtersPanelWidth, setFiltersPanelWidth] = React.useState(416);
+  const [urlQuery, setUrlQuery] = React.useState("");
   const facetFilters = React.useMemo(() => deriveFacetFilters(filterGroups), [filterGroups]);
 
   const setFacetFilter = React.useCallback((group: FilterFieldKey, values?: string[]) => {
@@ -880,9 +910,31 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     setFiltersEnabled(true);
   }, []);
 
-  const totalSelectedFilters = React.useMemo(() => countActiveConditions(filterGroups), [filterGroups]);
+  const totalSelectedFilters = React.useMemo(
+    () => countActiveConditions(filterGroups) + (urlQuery.trim() ? 1 : 0),
+    [filterGroups, urlQuery],
+  );
   const hasAnyFilters = totalSelectedFilters > 0;
   const showFiltered = hasAnyFilters && filtersEnabled;
+
+  const appliedColumnFilters = React.useMemo(() => {
+    if (!filtersEnabled) return [];
+
+    const next: Array<{ id: string; value: unknown }> = [];
+    const q = urlQuery.trim();
+    if (q) next.push({ id: "url", value: q });
+
+    for (const [key, values] of Object.entries(facetFilters) as Array<[FilterFieldKey, string[] | undefined]>) {
+      if (!values?.length) continue;
+      next.push({ id: key, value: values });
+    }
+
+    return next;
+  }, [facetFilters, filtersEnabled, urlQuery]);
+
+  React.useEffect(() => {
+    table.setColumnFilters(appliedColumnFilters);
+  }, [appliedColumnFilters, table]);
 
   React.useEffect(() => {
     if (activeTab !== "outline" && filtersPanelOpen) {
@@ -1003,6 +1055,15 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
           <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 flex-1 items-center overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               <div className="flex flex-nowrap items-center gap-2">
+                <div className="relative w-56 shrink-0">
+                  <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 size-4 text-muted-foreground" />
+                  <Input
+                    value={urlQuery}
+                    onChange={(e) => setUrlQuery(e.target.value)}
+                    placeholder="Filter URL..."
+                    className="h-8 pl-9"
+                  />
+                </div>
                 <FieldLabel htmlFor="filters-enabled" className="!w-fit">
                   <Field
                     orientation="horizontal"
@@ -1021,6 +1082,18 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                   </Field>
                 </FieldLabel>
                 <div className="h-6 w-px bg-border" />
+                <DataTableFacetedFilter
+                  title="Client"
+                  options={[...CLIENT_OPTIONS]}
+                  values={facetFilters.client}
+                  onChange={(value) => setFacetFilter("client", value)}
+                />
+                <DataTableFacetedFilter
+                  title="Host"
+                  options={[...HOST_OPTIONS]}
+                  values={facetFilters.host}
+                  onChange={(value) => setFacetFilter("host", value)}
+                />
                 <DataTableFacetedFilter
                   title="Format"
                   options={[
@@ -1047,14 +1120,15 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                     { label: "4xx", value: "4xx" },
                     { label: "5xx", value: "5xx" },
                   ]}
-                  values={facetFilters.status}
-                  onChange={(value) => setFacetFilter("status", value)}
+                  values={facetFilters.statusGroup}
+                  onChange={(value) => setFacetFilter("statusGroup", value)}
                 />
                 {hasAnyFilters ? (
                   <button
                     type="button"
                     onClick={() => {
                       setFilterGroups([createEmptyGroup()]);
+                      setUrlQuery("");
                       setFiltersEnabled(false);
                     }}
                     className="text-sm font-medium text-foreground hover:text-foreground/80 inline-flex items-center gap-2 px-3 py-1.5"
@@ -1110,6 +1184,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             totalActiveConditions={totalSelectedFilters}
             onClearAll={() => {
               setFilterGroups([createEmptyGroup()]);
+              setUrlQuery("");
               setFiltersEnabled(false);
             }}
             onChange={(next) => {

@@ -13,6 +13,8 @@ export const sectionSchema = z.object({
   host: z.string().optional(),
   path: z.string().optional(),
   query: z.string().optional(),
+  format: z.string().optional(),
+  statusGroup: z.string().optional(),
   client: z.string().optional(),
   method: z.string().optional(),
   code: z.number().optional(),
