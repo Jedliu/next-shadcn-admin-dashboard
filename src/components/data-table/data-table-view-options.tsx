@@ -218,7 +218,9 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
 
         {(() => {
           const renderNode = (node: (typeof toggleNodes.roots)[number], depth: number) => {
-            const padding = depth <= 0 ? undefined : depth === 1 ? "pl-12" : depth === 2 ? "pl-14" : "pl-16";
+            // Keep the checkmark aligned, but slightly indent the label for child columns.
+            // DropdownMenuCheckboxItem already uses `pl-8`, so small increments look better than large jumps.
+            const padding = depth <= 0 ? undefined : depth === 1 ? "pl-10" : depth === 2 ? "pl-12" : "pl-14";
             return (
               <React.Fragment key={node.id}>
                 <DropdownMenuCheckboxItem
