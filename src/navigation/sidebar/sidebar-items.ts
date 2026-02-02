@@ -1,5 +1,6 @@
 import { Fingerprint, History, LayoutDashboard, type LucideIcon, Puzzle } from "lucide-react";
 
+import { processFiltersNavItem } from "@/navigation/process-filters/process-filters-nav";
 import { proxyNavItem } from "@/navigation/proxy/proxy-nav";
 import { settingsNavItem } from "@/navigation/settings/settings-nav";
 
@@ -42,6 +43,7 @@ export const sidebarItems: NavGroup[] = [
         url: "/dashboard/workbench",
         icon: LayoutDashboard,
       },
+      processFiltersNavItem,
       {
         title: "History",
         url: "/dashboard/workbench/history",

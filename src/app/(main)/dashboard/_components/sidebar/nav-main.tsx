@@ -228,6 +228,7 @@ const NavItemCollapsed = ({
 
 export function NavMain({ items }: NavMainProps) {
   const path = usePathname();
+  const [hash, setHash] = React.useState("");
   const { state, isMobile } = useSidebar();
   const {
     open: quickCreateOpen,
@@ -305,6 +306,13 @@ export function NavMain({ items }: NavMainProps) {
   }, [isMobile]);
 
   React.useEffect(() => {
+    const readHash = () => setHash(window.location.hash.replace(/^#/, ""));
+    readHash();
+    window.addEventListener("hashchange", readHash);
+    return () => window.removeEventListener("hashchange", readHash);
+  }, []);
+
+  React.useEffect(() => {
     if (isMobile || quickCreateOpen) return;
     const flyout = document.querySelector<HTMLElement>('[data-slot="quick-create-flyout"]');
     const active = document.activeElement as HTMLElement | null;
@@ -328,10 +336,21 @@ export function NavMain({ items }: NavMainProps) {
   }, [isMobile, quickCreateOpen, quickCreatePinned, updateSidebarRight]);
 
   const isItemActive = (url: string, subItems?: NavMainItem["subItems"]) => {
+    const currentHash = hash || "settings";
+    const [base, targetHash] = url.split("#");
+
+    const matchesUrl = (targetUrl: string) => {
+      const [targetBase, targetHash] = targetUrl.split("#");
+      if (path !== targetBase) return false;
+      if (!targetHash) return true;
+      return targetHash === currentHash;
+    };
+
     if (subItems?.length) {
-      return path === url || subItems.some((sub) => !sub.action && path.startsWith(sub.url));
+      return base === path || subItems.some((sub) => !sub.action && matchesUrl(sub.url));
     }
-    return path === url;
+    if (!targetHash) return path === base;
+    return matchesUrl(url);
   };
 
   const onSubItemAction = React.useCallback(
