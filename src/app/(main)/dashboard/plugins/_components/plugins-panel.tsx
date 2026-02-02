@@ -36,6 +36,8 @@ import { Label } from "@/components/ui/label";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { cn } from "@/lib/utils";
 
+import { CreatePluginDialog } from "./create-plugin-dialog";
+
 type PluginStatus = "enabled" | "disabled";
 
 type Plugin = {
@@ -150,8 +152,6 @@ export function PluginsPanel() {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [createOpen, setCreateOpen] = React.useState(false);
-  const [createName, setCreateName] = React.useState("");
-  const [createDescription, setCreateDescription] = React.useState("");
 
   const [configurePluginId, setConfigurePluginId] = React.useState<string | null>(null);
 
@@ -343,8 +343,24 @@ export function PluginsPanel() {
     e.target.value = "";
   };
 
+  const handleCreatePlugin = (data: { name: string; description: string }) => {
+    const name = data.name.trim() || `plugin_${Math.random().toString(16).slice(2, 6)}`;
+    const next: Plugin = {
+      id: name,
+      name,
+      description: data.description.trim() || "New plugin",
+      author: "You",
+      version: "v0.1.0",
+      priority: 100,
+      status: "disabled",
+    };
+    setPlugins((prev) => [next, ...prev]);
+    toast.success(`Created plugin: ${name}`);
+  };
+
   return (
     <div className="@container/main flex h-full min-h-0 flex-col gap-6">
+      {/* ... (keep header and cards) */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="font-semibold text-2xl tracking-tight">Plugins</h1>
@@ -424,68 +440,7 @@ export function PluginsPanel() {
         <DataTablePagination table={table} />
       </div>
 
-      <Dialog
-        open={createOpen}
-        onOpenChange={(open) => {
-          setCreateOpen(open);
-          if (!open) {
-            setCreateName("");
-            setCreateDescription("");
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create plugin</DialogTitle>
-            <DialogDescription>Demo create flow. This does not upload a real plugin yet.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="plugin-name">Name</Label>
-              <Input
-                id="plugin-name"
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                placeholder="my_plugin"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="plugin-description">Description</Label>
-              <Input
-                id="plugin-description"
-                value={createDescription}
-                onChange={(e) => setCreateDescription(e.target.value)}
-                placeholder="What does this plugin do?"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                const name = createName.trim() || `plugin_${Math.random().toString(16).slice(2, 6)}`;
-                const next: Plugin = {
-                  id: name,
-                  name,
-                  description: createDescription.trim() || "New plugin",
-                  author: "You",
-                  version: "v0.1.0",
-                  priority: 100,
-                  status: "disabled",
-                };
-                setPlugins((prev) => [next, ...prev]);
-                toast.success(`Created plugin: ${name}`);
-                setCreateOpen(false);
-              }}
-            >
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreatePluginDialog open={createOpen} onOpenChange={setCreateOpen} onSave={handleCreatePlugin} />
 
       <Dialog
         open={Boolean(configurePluginId)}
@@ -493,6 +448,7 @@ export function PluginsPanel() {
           if (!open) setConfigurePluginId(null);
         }}
       >
+        {/* ... (keep configure dialog content) */}
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Configure plugin</DialogTitle>
