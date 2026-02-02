@@ -30,6 +30,7 @@ export function ProcessFiltersSubnav() {
             key={item.url}
             prefetch={false}
             href={item.url}
+            onClick={() => setHash(targetHash ?? "")}
             className={cn(
               "inline-flex items-center rounded-md px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground",
               active && "bg-muted font-medium text-foreground",
