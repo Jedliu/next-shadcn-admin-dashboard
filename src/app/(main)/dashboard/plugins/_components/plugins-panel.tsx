@@ -379,68 +379,80 @@ export function PluginsPanel() {
         </div>
       </div>
 
-      <div className="grid @xl/main:grid-cols-3 gap-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">{totalCount}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Enabled</CardDescription>
-            <CardTitle className="text-3xl text-emerald-600 tabular-nums">{enabledCount}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Disabled</CardDescription>
-            <CardTitle className="text-3xl text-destructive tabular-nums">{disabledCount}</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <div className="flex @md/main:flex-row flex-col @md/main:items-center @md/main:justify-between gap-3">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter by name or ID..."
-              className="h-8 @md/main:w-[280px] w-full"
-            />
-
-            <DataTableFacetedFilter
-              title="Status"
-              options={[
-                { label: "Enabled", value: "enabled", icon: CircleCheck },
-                { label: "Disabled", value: "disabled", icon: CircleMinus },
-              ]}
-              values={statusFilter === "all" ? undefined : [statusFilter]}
-              onChange={(values) => {
-                if (!values || values.length === 0 || values.length > 1) {
-                  setStatusFilter("all");
-                  return;
-                }
-                setStatusFilter(values[0] as PluginStatus);
-              }}
-              listClassName="max-h-56"
-            />
+      <div className="relative min-h-0 flex-1">
+        <div className={cn("flex min-h-0 flex-1 flex-col gap-6", createOpen && "pointer-events-none")}>
+          <div className="grid @xl/main:grid-cols-3 gap-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Total</CardDescription>
+                <CardTitle className="text-3xl tabular-nums">{totalCount}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Enabled</CardDescription>
+                <CardTitle className="text-3xl text-emerald-600 tabular-nums">{enabledCount}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Disabled</CardDescription>
+                <CardTitle className="text-3xl text-destructive tabular-nums">{disabledCount}</CardTitle>
+              </CardHeader>
+            </Card>
           </div>
 
-          <div className="flex items-center gap-2">
-            <DataTableViewOptions table={table} />
+          <div className="flex min-h-0 flex-1 flex-col gap-4">
+            <div className="flex @md/main:flex-row flex-col @md/main:items-center @md/main:justify-between gap-3">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Filter by name or ID..."
+                  className="h-8 @md/main:w-[280px] w-full"
+                />
+
+                <DataTableFacetedFilter
+                  title="Status"
+                  options={[
+                    { label: "Enabled", value: "enabled", icon: CircleCheck },
+                    { label: "Disabled", value: "disabled", icon: CircleMinus },
+                  ]}
+                  values={statusFilter === "all" ? undefined : [statusFilter]}
+                  onChange={(values) => {
+                    if (!values || values.length === 0 || values.length > 1) {
+                      setStatusFilter("all");
+                      return;
+                    }
+                    setStatusFilter(values[0] as PluginStatus);
+                  }}
+                  listClassName="max-h-56"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <DataTableViewOptions table={table} />
+              </div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:border-border before:border-b before:bg-muted">
+              <DataTable
+                table={table}
+                columns={columns}
+                className="relative z-10 w-auto [&_thead_tr]:border-transparent"
+              />
+            </div>
+
+            <DataTablePagination table={table} />
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:border-border before:border-b before:bg-muted">
-          <DataTable table={table} columns={columns} className="relative z-10 w-auto [&_thead_tr]:border-transparent" />
-        </div>
-
-        <DataTablePagination table={table} />
+        {createOpen && (
+          <div className="absolute inset-0 z-20 flex h-full w-full bg-background/80 backdrop-blur-sm">
+            <CreatePluginDialog onClose={() => setCreateOpen(false)} onSave={handleCreatePlugin} />
+          </div>
+        )}
       </div>
-
-      <CreatePluginDialog open={createOpen} onOpenChange={setCreateOpen} onSave={handleCreatePlugin} />
 
       <Dialog
         open={Boolean(configurePluginId)}
