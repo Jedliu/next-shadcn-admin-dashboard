@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 import { DataTableColumnHeader } from "../../../../../components/data-table/data-table-column-header";
 import type { sectionSchema } from "./schema";
@@ -197,16 +198,29 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
   {
     accessorKey: "status",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-    cell: ({ row }) => (
-      <Badge variant="outline" className="px-1.5 text-muted-foreground">
-        {row.original.status === "Done" ? (
-          <CircleCheck className="fill-green-500 stroke-border dark:fill-green-400" />
-        ) : (
-          <Loader />
-        )}
-        {row.original.status}
-      </Badge>
-    ),
+    cell: ({ row }) => {
+      const status = row.original.status;
+      return (
+        <Badge
+          variant="outline"
+          className={cn(
+            "px-1.5",
+            status === "Done" &&
+              "border-transparent bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
+            status === "In Process" &&
+              "border-transparent bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400",
+            status !== "Done" && status !== "In Process" && "text-muted-foreground",
+          )}
+        >
+          {status === "Done" ? (
+            <CircleCheck className="fill-emerald-500 stroke-white dark:fill-emerald-400 dark:stroke-black" />
+          ) : (
+            <Loader className={cn("size-3", status === "In Process" && "text-blue-500 dark:text-blue-400")} />
+          )}
+          {status}
+        </Badge>
+      );
+    },
     size: 150,
     minSize: 140,
     meta: { label: "Status", order: 7 },

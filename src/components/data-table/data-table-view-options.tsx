@@ -256,11 +256,11 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
           <DropdownMenuPrimitive.SubContent
             sideOffset={8}
             className={cn(
-              "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-50 w-52 max-h-[calc(100svh-2rem)] overflow-hidden rounded-md border shadow-lg",
+              "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-50 max-h-[calc(100svh-2rem)] w-52 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg data-[state=closed]:animate-out data-[state=open]:animate-in",
             )}
           >
             <div className="border-b px-4 py-3">
-              <div className="text-sm font-medium">Drag to order</div>
+              <div className="font-medium text-sm">Drag to order</div>
             </div>
             <div className="flex min-h-0 flex-col gap-2 overflow-y-auto px-4 py-3 text-sm">
               {columnIds.length === 0 ? (

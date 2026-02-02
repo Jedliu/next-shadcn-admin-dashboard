@@ -5,8 +5,8 @@ export default function Page() {
   return (
     <div className="@container/main flex h-full min-h-0 flex-col gap-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Workbench</h1>
-        <p className="text-sm text-muted-foreground">Track work items, ownership, and current status.</p>
+        <h1 className="font-semibold text-2xl tracking-tight">Workbench</h1>
+        <p className="text-muted-foreground text-sm">Track work items, ownership, and current status.</p>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
         <DataTable data={data} />

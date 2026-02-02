@@ -274,19 +274,19 @@ function TableCellViewerBody({
             <div className="min-h-0 flex-1">
               <TabsContent value="raw" className="h-full">
                 <ScrollArea className="h-full">
-                  <pre className="p-3 font-mono text-xs leading-5 text-foreground">{responseHeaders.join("\n")}</pre>
+                  <pre className="p-3 font-mono text-foreground text-xs leading-5">{responseHeaders.join("\n")}</pre>
                 </ScrollArea>
               </TabsContent>
 
               <TabsContent value="resp-headers" className="h-full">
                 <ScrollArea className="h-full">
-                  <pre className="p-3 font-mono text-xs leading-5 text-foreground">{responseHeaders.join("\n")}</pre>
+                  <pre className="p-3 font-mono text-foreground text-xs leading-5">{responseHeaders.join("\n")}</pre>
                 </ScrollArea>
               </TabsContent>
 
               <TabsContent value="resp-body" className="h-full">
                 <ScrollArea className="h-full">
-                  <pre className="p-3 font-mono text-xs leading-5 text-foreground">{responseBody}</pre>
+                  <pre className="p-3 font-mono text-foreground text-xs leading-5">{responseBody}</pre>
                 </ScrollArea>
               </TabsContent>
 
@@ -515,8 +515,8 @@ export function TableCellViewerDrawer() {
             }}
           >
             <div className="absolute inset-y-0 left-0 w-px bg-border" />
-            <div className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-              <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background shadow-sm">
+            <div className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-0 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background bg-border shadow-sm">
                 <GripVerticalIcon className="size-2.5" />
               </div>
             </div>
@@ -614,8 +614,8 @@ export function TableCellViewerDrawer() {
             }}
           >
             <div className="absolute inset-y-0 left-0 w-px bg-border" />
-            <div className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-              <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background shadow-sm">
+            <div className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-0 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background bg-border shadow-sm">
                 <GripVerticalIcon className="size-2.5" />
               </div>
             </div>
@@ -699,8 +699,8 @@ export function TableCellViewerInset() {
           }}
         >
           <div className="absolute top-0 bottom-0 left-0 w-px bg-border" />
-          <div className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-            <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background shadow-sm">
+          <div className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-0 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background bg-border shadow-sm">
               <GripVerticalIcon className="size-2.5" />
             </div>
           </div>

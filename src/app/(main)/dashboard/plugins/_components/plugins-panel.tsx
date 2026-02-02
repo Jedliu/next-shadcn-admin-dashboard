@@ -219,7 +219,7 @@ export function PluginsPanel() {
         cell: ({ row }) => (
           <div className="min-w-0 space-y-1">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="font-mono text-sm font-semibold">{row.original.name}</span>
+              <span className="font-mono font-semibold text-sm">{row.original.name}</span>
               <Badge variant="outline" className="font-mono text-muted-foreground">
                 {row.original.version}
               </Badge>
@@ -234,7 +234,7 @@ export function PluginsPanel() {
         accessorKey: "priority",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Priority" />,
         cell: ({ row }) => (
-          <div className="font-mono text-sm tabular-nums text-muted-foreground">{row.original.priority}</div>
+          <div className="font-mono text-muted-foreground text-sm tabular-nums">{row.original.priority}</div>
         ),
         size: 110,
         minSize: 96,
@@ -242,7 +242,7 @@ export function PluginsPanel() {
       {
         accessorKey: "author",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Author" />,
-        cell: ({ row }) => <div className="text-sm text-muted-foreground">{row.original.author}</div>,
+        cell: ({ row }) => <div className="text-muted-foreground text-sm">{row.original.author}</div>,
         size: 160,
         minSize: 140,
       },
@@ -256,7 +256,7 @@ export function PluginsPanel() {
       {
         accessorKey: "id",
         header: ({ column }) => <DataTableColumnHeader column={column} title="ID" />,
-        cell: ({ row }) => <div className="font-mono text-sm text-muted-foreground">{row.original.id}</div>,
+        cell: ({ row }) => <div className="font-mono text-muted-foreground text-sm">{row.original.id}</div>,
         size: 180,
         minSize: 140,
       },
@@ -347,8 +347,8 @@ export function PluginsPanel() {
     <div className="@container/main flex h-full min-h-0 flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Plugins</h1>
-          <p className="text-sm text-muted-foreground">Manage installed plugins, priorities, and runtime status.</p>
+          <h1 className="font-semibold text-2xl tracking-tight">Plugins</h1>
+          <p className="text-muted-foreground text-sm">Manage installed plugins, priorities, and runtime status.</p>
         </div>
         <div className="flex items-center gap-2">
           <input ref={fileInputRef} type="file" className="hidden" onChange={onImportSelected} />
@@ -363,7 +363,7 @@ export function PluginsPanel() {
         </div>
       </div>
 
-      <div className="grid gap-3 @xl/main:grid-cols-3">
+      <div className="grid @xl/main:grid-cols-3 gap-3">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total</CardDescription>
@@ -385,13 +385,13 @@ export function PluginsPanel() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <div className="flex flex-col gap-3 @md/main:flex-row @md/main:items-center @md/main:justify-between">
+        <div className="flex @md/main:flex-row flex-col @md/main:items-center @md/main:justify-between gap-3">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter by name or ID..."
-              className="h-8 w-full @md/main:w-[280px]"
+              className="h-8 @md/main:w-[280px] w-full"
             />
 
             <DataTableFacetedFilter

@@ -98,15 +98,15 @@ export function LayoutControls() {
   return (
     <div className="flex flex-col gap-6">
       <div className="space-y-1">
-        <h2 className="text-base font-semibold">Appearance</h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="font-semibold text-base">Appearance</h2>
+        <p className="text-muted-foreground text-sm">
           Customize the appearance of the app. Automatically switch between day and night themes.
         </p>
       </div>
       <Separator />
       <div className="space-y-6 **:data-[slot=toggle-group]:w-full **:data-[slot=toggle-group-item]:flex-1 **:data-[slot=toggle-group-item]:text-xs">
         <div className="space-y-2">
-          <Label className="text-xs font-medium">Font</Label>
+          <Label className="font-medium text-xs">Font</Label>
           <Select value={font} onValueChange={onFontChange}>
             <SelectTrigger size="sm" className="w-full text-xs">
               <SelectValue placeholder="Select font" />
@@ -119,11 +119,11 @@ export function LayoutControls() {
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">Set the font you want to use in the dashboard.</p>
+          <p className="text-muted-foreground text-xs">Set the font you want to use in the dashboard.</p>
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium">Theme Preset</Label>
+          <Label className="font-medium text-xs">Theme Preset</Label>
           <Select value={themePreset} onValueChange={onThemePresetChange}>
             <SelectTrigger size="sm" className="w-full text-xs">
               <SelectValue placeholder="Preset" />
@@ -143,12 +143,12 @@ export function LayoutControls() {
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">Select the color preset for the dashboard.</p>
+          <p className="text-muted-foreground text-xs">Select the color preset for the dashboard.</p>
         </div>
 
         <div className="space-y-3">
-          <Label className="text-xs font-medium">Theme</Label>
-          <p className="text-xs text-muted-foreground">Select the theme for the dashboard.</p>
+          <Label className="font-medium text-xs">Theme</Label>
+          <p className="text-muted-foreground text-xs">Select the theme for the dashboard.</p>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {[
               { value: "light", label: "Light" },
@@ -171,7 +171,7 @@ export function LayoutControls() {
                   <div
                     className={cn(
                       "flex h-20 w-24 flex-col gap-2 rounded-md border p-2",
-                      mode.value === "dark" ? "bg-zinc-950 border-zinc-800" : "bg-white border-zinc-200",
+                      mode.value === "dark" ? "border-zinc-800 bg-zinc-950" : "border-zinc-200 bg-white",
                     )}
                   >
                     <div className={cn("h-4 rounded-full", mode.value === "dark" ? "bg-slate-700" : "bg-zinc-200")} />
@@ -191,8 +191,8 @@ export function LayoutControls() {
                     </div>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium">{mode.label}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="font-medium text-sm">{mode.label}</span>
+                    <span className="text-muted-foreground text-xs">
                       {mode.value === "system" ? "Match your OS settings." : `Use ${mode.label.toLowerCase()} theme.`}
                     </span>
                   </div>
@@ -203,7 +203,7 @@ export function LayoutControls() {
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium">Page Layout</Label>
+          <Label className="font-medium text-xs">Page Layout</Label>
           <ToggleGroup
             size="sm"
             variant="outline"
@@ -221,7 +221,7 @@ export function LayoutControls() {
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium">Navbar Behavior</Label>
+          <Label className="font-medium text-xs">Navbar Behavior</Label>
           <ToggleGroup
             size="sm"
             variant="outline"
@@ -239,7 +239,7 @@ export function LayoutControls() {
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium">Sidebar Style</Label>
+          <Label className="font-medium text-xs">Sidebar Style</Label>
           <ToggleGroup size="sm" variant="outline" type="single" value={variant} onValueChange={onSidebarStyleChange}>
             <ToggleGroupItem value="inset" aria-label="Toggle inset">
               Inset
@@ -254,7 +254,7 @@ export function LayoutControls() {
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium">Sidebar Collapse Mode</Label>
+          <Label className="font-medium text-xs">Sidebar Collapse Mode</Label>
           <ToggleGroup
             size="sm"
             variant="outline"

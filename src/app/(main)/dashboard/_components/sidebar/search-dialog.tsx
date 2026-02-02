@@ -43,13 +43,13 @@ export function SearchDialog() {
   return (
     <>
       <Button
-        variant="link"
-        className="!px-0 font-normal text-muted-foreground hover:no-underline"
+        variant="outline"
+        className="h-8 w-full justify-start gap-2 bg-muted/50 px-2 font-normal text-muted-foreground shadow-none hover:bg-muted hover:text-foreground md:w-64 lg:w-80"
         onClick={() => setOpen(true)}
       >
         <Search className="size-4" />
         Search
-        <kbd className="inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium text-[10px]">
+        <kbd className="ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-medium text-[10px] text-muted-foreground">
           <span className="text-xs">⌘</span>J
         </kbd>
       </Button>

@@ -218,3 +218,10 @@ html {
 .disable-transitions * {
   transition: none !important;
 }
+
+@layer components {
+  /* Enhance sidebar active state visibility */
+  [data-sidebar="menu-button"][data-active="true"] {
+    @apply bg-sidebar-accent border-l-4 border-sidebar-primary rounded-l-none pl-[calc(0.5rem-4px)] font-bold;
+  }
+}

@@ -20,7 +20,7 @@ export function ProcessFiltersSubnav() {
   }, []);
 
   return (
-    <nav className="flex flex-row gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden lg:flex-col">
+    <nav className="flex flex-row gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-col [&::-webkit-scrollbar]:hidden">
       {processFiltersNavItem.subItems.map((item) => {
         const [base, targetHash] = item.url.split("#");
         const active = pathname === base && targetHash === (hash || "settings");
@@ -31,8 +31,8 @@ export function ProcessFiltersSubnav() {
             prefetch={false}
             href={item.url}
             className={cn(
-              "text-muted-foreground hover:bg-muted hover:text-foreground inline-flex items-center rounded-md px-3 py-2 text-sm transition-colors",
-              active && "bg-muted text-foreground font-medium",
+              "inline-flex items-center rounded-md px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground",
+              active && "bg-muted font-medium text-foreground",
             )}
             aria-current={active ? "page" : undefined}
           >

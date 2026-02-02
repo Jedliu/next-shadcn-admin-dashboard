@@ -5,16 +5,11 @@ import { cookies } from "next/headers";
 import { QuickCreateInset } from "@/app/(main)/dashboard/_components/quick-create/quick-create-inset";
 import { QuickCreateProvider } from "@/app/(main)/dashboard/_components/quick-create/quick-create-provider";
 import { AppSidebar } from "@/app/(main)/dashboard/_components/sidebar/app-sidebar";
-import { Separator } from "@/components/ui/separator";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { users } from "@/data/users";
+import { AppHeader } from "@/components/app-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SIDEBAR_COLLAPSIBLE_VALUES, SIDEBAR_VARIANT_VALUES } from "@/lib/preferences/layout";
 import { cn } from "@/lib/utils";
 import { getPreference } from "@/server/server-actions";
-
-import { AccountSwitcher } from "./_components/sidebar/account-switcher";
-import { SearchDialog } from "./_components/sidebar/search-dialog";
-import { ThemeSwitcher } from "./_components/sidebar/theme-switcher";
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
   const cookieStore = await cookies();
@@ -36,6 +31,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             "max-[113rem]:peer-data-[variant=inset]:mr-2! min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:mr-auto!",
           )}
         >
+          <AppHeader />
           <QuickCreateInset>{children}</QuickCreateInset>
         </SidebarInset>
       </SidebarProvider>

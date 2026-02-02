@@ -39,11 +39,11 @@ export function CertificatesPanel() {
         </CardHeader>
         <CardContent className="px-5">
           <div className="grid gap-2">
-            <div className="text-sm text-muted-foreground">Certificate path</div>
+            <div className="text-muted-foreground text-sm">Certificate path</div>
             <div className="flex min-w-0 items-center gap-2">
-              <div className="font-mono text-sm min-w-0 flex-1 truncate">{certPath}</div>
+              <div className="min-w-0 flex-1 truncate font-mono text-sm">{certPath}</div>
               <Button
-                className="mr-auto -ml-3 text-muted-foreground"
+                className="-ml-3 mr-auto text-muted-foreground"
                 variant="link"
                 type="button"
                 onClick={openCertFolder}

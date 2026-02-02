@@ -50,13 +50,13 @@ export function ProcessFiltersSettings() {
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Filter className="size-4 text-muted-foreground" />
-        <div className="text-base font-medium">Process filter settings</div>
+        <div className="font-medium text-base">Process filter settings</div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-muted/10 p-4">
         <div className="space-y-1">
           <div className="font-medium">Enable process filters</div>
-          <div className="text-sm text-muted-foreground">Only capture traffic for processes that match a rule.</div>
+          <div className="text-muted-foreground text-sm">Only capture traffic for processes that match a rule.</div>
         </div>
         <Switch defaultChecked aria-label="Enable process filters" />
       </div>
@@ -70,14 +70,14 @@ export function ProcessFiltersSettings() {
             <Checkbox defaultChecked />
             <span className="grid gap-1">
               <span className="font-medium">Allow network</span>
-              <span className="text-xs text-muted-foreground">Capture traffic for unknown processes.</span>
+              <span className="text-muted-foreground text-xs">Capture traffic for unknown processes.</span>
             </span>
           </Label>
           <Label className="flex items-start gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
             <Checkbox defaultChecked />
             <span className="grid gap-1">
               <span className="font-medium">Record logs</span>
-              <span className="text-xs text-muted-foreground">Keep request logs when unmatched.</span>
+              <span className="text-muted-foreground text-xs">Keep request logs when unmatched.</span>
             </span>
           </Label>
         </div>
@@ -91,7 +91,7 @@ export function ProcessFiltersAddRule() {
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Plus className="size-4 text-muted-foreground" />
-        <div className="text-base font-medium">Add new rule</div>
+        <div className="font-medium text-base">Add new rule</div>
       </div>
 
       <div className="space-y-3">
@@ -112,7 +112,7 @@ export function ProcessFiltersAddRule() {
             Add
           </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
           <Label className="flex items-center gap-2">
             <Checkbox defaultChecked />
             Allow network
@@ -164,8 +164,8 @@ export function ProcessFiltersAppliedRules() {
                       {rule.enabled ? "Applied" : "Paused"}
                     </Badge>
                   </div>
-                  <div className="w-full truncate text-xs text-muted-foreground">{rule.path}</div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <div className="w-full truncate text-muted-foreground text-xs">{rule.path}</div>
+                  <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
                     {rule.allowNetwork ? <span>Allow network</span> : <span>Network blocked</span>}
                     {rule.recordLogs ? <span>Record logs</span> : <span>No logs</span>}
                   </div>

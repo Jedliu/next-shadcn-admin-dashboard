@@ -17,7 +17,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { type ColumnDef, flexRender, type Table as TanStackTable } from "@tanstack/react-table";
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 import { DraggableRow } from "./draggable-row";
@@ -28,7 +28,6 @@ interface DataTableProps<TData, TValue> {
   dndEnabled?: boolean;
   onReorder?: (newData: TData[]) => void;
   className?: string;
-  minRowCount?: number;
 }
 
 function renderTableBody<TData, TValue>({
@@ -77,14 +76,10 @@ export function DataTable<TData, TValue>({
   dndEnabled = false,
   onReorder,
   className,
-  minRowCount,
 }: DataTableProps<TData, TValue>) {
   const dataIds: UniqueIdentifier[] = table.getRowModel().rows.map((row) => Number(row.id) as UniqueIdentifier);
   const sortableId = React.useId();
   const sensors = useSensors(useSensor(MouseSensor, {}), useSensor(TouchSensor, {}), useSensor(KeyboardSensor, {}));
-  const visibleColumnCount = table.getVisibleLeafColumns().length;
-  const rowCount = table.getRowModel().rows.length;
-  const fillerRows = minRowCount && rowCount > 0 ? Math.max(0, minRowCount - rowCount) : 0;
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -99,7 +94,10 @@ export function DataTable<TData, TValue>({
   }
 
   const tableContent = (
-    <Table className={cn("table-fixed", className)} style={{ width: table.getTotalSize() }}>
+    <table
+      className={cn("w-full caption-bottom text-sm table-fixed", className)}
+      style={{ width: table.getTotalSize() }}
+    >
       <TableHeader className="sticky top-0 z-10 bg-muted">
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id}>
@@ -159,19 +157,8 @@ export function DataTable<TData, TValue>({
       </TableHeader>
       <TableBody className="**:data-[slot=table-cell]:first:w-8">
         {renderTableBody({ table, columns, dndEnabled, dataIds })}
-        {fillerRows > 0
-          ? Array.from({ length: fillerRows }).map((_, rowIndex) => (
-              <TableRow key={`filler-${rowIndex}`} aria-hidden="true" className="hover:bg-transparent">
-                {Array.from({ length: visibleColumnCount }).map((__, cellIndex) => (
-                  <TableCell key={`filler-${rowIndex}-${cellIndex}`} className="py-3">
-                    <div className="h-3 w-full max-w-[120px] rounded bg-muted/40" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          : null}
       </TableBody>
-    </Table>
+    </table>
   );
 
   if (dndEnabled) {

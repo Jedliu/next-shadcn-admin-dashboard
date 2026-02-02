@@ -252,7 +252,7 @@ function FiltersBuilder({
                 type="button"
                 size="sm"
                 variant="outline"
-                className="absolute left-8 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-8 rounded-full"
                 onClick={() =>
                   onChange(
                     groups.map((g) => ({
@@ -274,9 +274,9 @@ function FiltersBuilder({
                 <div className="relative">
                   {showGroupConnector ? (
                     groupIndex === 0 ? (
-                      <div className="absolute -left-8 top-0 h-px w-8 bg-border" />
+                      <div className="-left-8 absolute top-0 h-px w-8 bg-border" />
                     ) : groupIndex === groups.length - 1 ? (
-                      <div className="absolute -left-8 bottom-0 h-px w-8 bg-border" />
+                      <div className="-left-8 absolute bottom-0 h-px w-8 bg-border" />
                     ) : null
                   ) : null}
 
@@ -293,7 +293,7 @@ function FiltersBuilder({
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                className="absolute left-7 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                                className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-7 rounded-full"
                                 onClick={() =>
                                   onChange(
                                     groups.map((g) =>
@@ -319,13 +319,13 @@ function FiltersBuilder({
                                 <div key={cond.id} className="relative min-w-0">
                                   {group.conditions.length > 1 ? (
                                     conditionIndex === 0 ? (
-                                      <div className="absolute -left-9 top-0 h-px w-9 bg-border" />
+                                      <div className="-left-9 absolute top-0 h-px w-9 bg-border" />
                                     ) : conditionIndex === group.conditions.length - 1 ? (
-                                      <div className="absolute -left-9 bottom-0 h-px w-9 bg-border" />
+                                      <div className="-left-9 absolute bottom-0 h-px w-9 bg-border" />
                                     ) : null
                                   ) : null}
 
-                                  <div className="bg-background flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-md">
+                                  <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-md bg-background">
                                     <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-2 py-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                       <Select
                                         value={cond.field ?? ""}
@@ -410,7 +410,7 @@ function FiltersBuilder({
                                     <div className="flex shrink-0 items-center">
                                       <button
                                         type="button"
-                                        className="text-muted-foreground hover:text-foreground px-2 py-1.5"
+                                        className="px-2 py-1.5 text-muted-foreground hover:text-foreground"
                                         title="Clone"
                                         onClick={() => {
                                           onChange(
@@ -434,7 +434,7 @@ function FiltersBuilder({
                                       </button>
                                       <button
                                         type="button"
-                                        className="text-muted-foreground hover:text-foreground px-2 py-1.5 disabled:pointer-events-none disabled:opacity-40"
+                                        className="px-2 py-1.5 text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                                         title="Remove"
                                         disabled={groups.length === 1 && group.conditions.length === 1}
                                         onClick={() => {
@@ -709,8 +709,8 @@ function FiltersPanelDrawer({
             }}
           >
             <div className="absolute inset-y-0 left-0 w-px bg-border" />
-            <div className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-              <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background shadow-sm">
+            <div className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-0 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="z-10 flex h-4 w-3 items-center justify-center rounded-xs border bg-background bg-border shadow-sm">
                 <GripVerticalIcon className="size-2.5" />
               </div>
             </div>
@@ -862,18 +862,8 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     { value: "focus-documents", label: "Focus Documents" },
   ]);
   const [activeTab, setActiveTab] = React.useState("outline");
-  const [filterGroups, setFilterGroups] = React.useState<FilterGroup[]>(() => [
-    {
-      id: newId("group"),
-      join: "all",
-      conditionsJoin: "all",
-      conditions: [
-        { id: newId("cond"), field: "format", operator: "in", values: ["HTML"] },
-        { id: newId("cond"), field: "statusGroup", operator: "in", values: ["2xx"] },
-      ],
-    },
-  ]);
-  const [filtersEnabled, setFiltersEnabled] = React.useState(true);
+  const [filterGroups, setFilterGroups] = React.useState<FilterGroup[]>(() => [createEmptyGroup()]);
+  const [filtersEnabled, setFiltersEnabled] = React.useState(false); // Also set filtersEnabled to false initially
   const [filtersPanelOpen, setFiltersPanelOpen] = React.useState(false);
   const [filtersPanelWidth, setFiltersPanelWidth] = React.useState(416);
   const [urlQuery, setUrlQuery] = React.useState("");
@@ -982,7 +972,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                     table={table}
                     columns={columns}
                     onReorder={setData}
-                    minRowCount={12}
                     className="w-auto [&_thead_tr]:border-transparent"
                   />
                 </div>
@@ -1035,7 +1024,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                     {tab.badge ? <Badge variant="secondary">{tab.badge}</Badge> : null}
                     <button
                       type="button"
-                      className="text-muted-foreground hover:text-foreground inline-flex size-5 cursor-pointer items-center justify-center rounded-sm opacity-70 transition-opacity hover:opacity-100"
+                      className="inline-flex size-5 cursor-pointer items-center justify-center rounded-sm text-muted-foreground opacity-70 transition-opacity hover:text-foreground hover:opacity-100"
                       onPointerDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1055,7 +1044,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             </TabsList>
           </div>
           <div className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 flex-1 items-center overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex min-w-0 flex-1 items-center overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="flex flex-nowrap items-center gap-2">
                 <div className="relative w-56 shrink-0">
                   <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 size-4 text-muted-foreground" />
@@ -1069,7 +1058,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                 <FieldLabel htmlFor="filters-enabled" className="!w-fit">
                   <Field
                     orientation="horizontal"
-                    className="gap-1.5 overflow-hidden !px-3 !py-1.5 transition-all duration-100 ease-linear group-has-data-[state=checked]/field-label:!px-2"
+                    className="!px-3 !py-1.5 group-has-data-[state=checked]/field-label:!px-2 gap-1.5 overflow-hidden transition-all duration-100 ease-linear"
                   >
                     <Checkbox
                       id="filters-enabled"
@@ -1133,7 +1122,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                       setUrlQuery("");
                       setFiltersEnabled(false);
                     }}
-                    className="text-sm font-medium text-foreground hover:text-foreground/80 inline-flex items-center gap-2 px-3 py-1.5"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 font-medium text-foreground text-sm hover:text-foreground/80"
                   >
                     Reset
                     <XIcon className="size-4" />
@@ -1154,7 +1143,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                 <ListFilterPlus />
                 <span className="hidden lg:inline">Filters</span>
                 {totalSelectedFilters > 0 ? (
-                  <span className="pointer-events-none absolute top-0 right-0 z-20 flex min-w-4 origin-center translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-destructive px-1 text-white text-xs">
+                  <span className="-translate-y-1/2 pointer-events-none absolute top-0 right-0 z-20 flex min-w-4 origin-center translate-x-1/2 items-center justify-center rounded-full bg-destructive px-1 text-white text-xs">
                     {totalSelectedFilters}
                   </span>
                 ) : null}

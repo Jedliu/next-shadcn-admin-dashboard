@@ -100,7 +100,7 @@ export function DataTableFacetedFilter({
                       className={cn(
                         "flex size-4 items-center justify-center rounded-[4px] border",
                         isSelected
-                          ? "bg-primary border-primary text-primary-foreground"
+                          ? "border-primary bg-primary text-primary-foreground"
                           : "border-input [&_svg]:invisible",
                       )}
                     >

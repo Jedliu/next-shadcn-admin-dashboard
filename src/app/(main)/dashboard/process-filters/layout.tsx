@@ -10,8 +10,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="@container/main flex flex-col gap-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Process Filters</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-semibold text-2xl tracking-tight">Process Filters</h1>
+        <p className="text-muted-foreground text-sm">
           Create rules to control which processes are captured and logged.
         </p>
       </div>
