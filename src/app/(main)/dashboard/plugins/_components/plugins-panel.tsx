@@ -152,6 +152,9 @@ export function PluginsPanel() {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [createMounted, setCreateMounted] = React.useState(false);
+  const [createVisible, setCreateVisible] = React.useState(false);
+  const createUnmountTimeoutRef = React.useRef<number | null>(null);
 
   const [configurePluginId, setConfigurePluginId] = React.useState<string | null>(null);
 
@@ -358,6 +361,37 @@ export function PluginsPanel() {
     toast.success(`Created plugin: ${name}`);
   };
 
+  React.useEffect(() => {
+    if (createUnmountTimeoutRef.current) {
+      window.clearTimeout(createUnmountTimeoutRef.current);
+      createUnmountTimeoutRef.current = null;
+    }
+
+    if (createOpen) {
+      setCreateMounted(true);
+      setCreateVisible(false);
+      return;
+    }
+
+    setCreateVisible(false);
+    createUnmountTimeoutRef.current = window.setTimeout(() => {
+      setCreateMounted(false);
+    }, 320);
+
+    return () => {
+      if (createUnmountTimeoutRef.current) {
+        window.clearTimeout(createUnmountTimeoutRef.current);
+        createUnmountTimeoutRef.current = null;
+      }
+    };
+  }, [createOpen]);
+
+  React.useEffect(() => {
+    if (!createMounted) return;
+    const raf = requestAnimationFrame(() => setCreateVisible(true));
+    return () => cancelAnimationFrame(raf);
+  }, [createMounted]);
+
   return (
     <div className="@container/main flex h-full min-h-0 flex-col gap-6">
       {/* ... (keep header and cards) */}
@@ -380,7 +414,7 @@ export function PluginsPanel() {
       </div>
 
       <div className="relative min-h-0 flex-1">
-        <div className={cn("flex min-h-0 flex-1 flex-col gap-6", createOpen && "pointer-events-none")}>
+        <div className={cn("flex min-h-0 flex-1 flex-col gap-6", createMounted && "pointer-events-none")}>
           <div className="grid @xl/main:grid-cols-3 gap-3">
             <Card>
               <CardHeader className="pb-2">
@@ -447,9 +481,21 @@ export function PluginsPanel() {
           </div>
         </div>
 
-        {createOpen && (
-          <div className="absolute inset-0 z-20 flex h-full w-full bg-background/80 backdrop-blur-sm">
-            <CreatePluginDialog onClose={() => setCreateOpen(false)} onSave={handleCreatePlugin} />
+        {createMounted && (
+          <div
+            className={cn(
+              "absolute inset-0 z-20 flex h-full w-full bg-background/80 backdrop-blur-sm transition-opacity duration-300 ease-out",
+              createVisible ? "opacity-100" : "opacity-0",
+            )}
+          >
+            <div
+              className={cn(
+                "min-h-0 flex-1 transform-gpu transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                createVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-3 scale-[0.98] opacity-0",
+              )}
+            >
+              <CreatePluginDialog onClose={() => setCreateOpen(false)} onSave={handleCreatePlugin} />
+            </div>
           </div>
         )}
       </div>
