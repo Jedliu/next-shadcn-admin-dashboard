@@ -1,4 +1,4 @@
-import { FileText, Fingerprint, History, LayoutDashboard, type LucideIcon, Puzzle } from "lucide-react";
+import { Fingerprint, History, LayoutDashboard, type LucideIcon, Puzzle } from "lucide-react";
 
 import { processFiltersNavItem } from "@/navigation/process-filters/process-filters-nav";
 import { proxyNavItem } from "@/navigation/proxy/proxy-nav";
@@ -54,11 +54,6 @@ export const sidebarItems: NavGroup[] = [
         title: "Plugins",
         url: "/dashboard/plugins",
         icon: Puzzle,
-      },
-      {
-        title: "Logs",
-        url: "/dashboard/logs",
-        icon: FileText,
       },
     ],
   },
