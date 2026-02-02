@@ -23,7 +23,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 import { DataTable as DataTableNew } from "../../../../../components/data-table/data-table";
-import { DataTablePagination } from "../../../../../components/data-table/data-table-pagination";
 import { DataTableViewOptions } from "../../../../../components/data-table/data-table-view-options";
 import { withDndColumn } from "../../../../../components/data-table/table-utils";
 import { dashboardColumns } from "./columns";
@@ -840,6 +839,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
   const table = useDataTableInstance({
     data,
     columns,
+    defaultPageSize: data.length,
     defaultColumnVisibility: {
       format: false,
       host: false,
@@ -974,17 +974,19 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             data-slot="table-cell-viewer-anchor"
             className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:items-stretch"
           >
-            <div className="flex min-w-0 flex-1 flex-col gap-4">
-              <div className="relative overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:border-border before:border-b before:bg-muted">
-                <DataTableNew
-                  dndEnabled
-                  table={table}
-                  columns={columns}
-                  onReorder={setData}
-                  className="relative z-10 w-auto [&_thead_tr]:border-transparent"
-                />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:border-border before:border-b before:bg-muted">
+                <div className="relative z-10 min-h-0 flex-1 overflow-auto">
+                  <DataTableNew
+                    dndEnabled
+                    table={table}
+                    columns={columns}
+                    onReorder={setData}
+                    minRowCount={12}
+                    className="w-auto [&_thead_tr]:border-transparent"
+                  />
+                </div>
               </div>
-              <DataTablePagination table={table} />
             </div>
             <TableCellViewerInset />
           </div>
@@ -1164,7 +1166,9 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
               key={tab.value}
               value={tab.value}
               className={
-                tab.value === "outline" ? "relative flex min-h-0 flex-1 flex-col gap-4 overflow-auto" : "flex flex-col"
+                tab.value === "outline"
+                  ? "relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
+                  : "flex flex-col"
               }
             >
               {renderTabContent(tab.value)}
