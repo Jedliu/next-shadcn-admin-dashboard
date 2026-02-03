@@ -1044,7 +1044,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             </TabsList>
           </div>
           <div className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 flex-1 items-center overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex min-w-0 flex-1 items-center overflow-x-auto p-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="flex flex-nowrap items-center gap-2">
                 <div className="relative w-56 shrink-0">
                   <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 size-4 text-muted-foreground" />
@@ -1130,7 +1130,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                 ) : null}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pr-4">
               <DataTableViewOptions table={table} />
               <Button
                 type="button"

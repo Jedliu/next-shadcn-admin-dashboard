@@ -15,7 +15,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </div>
       <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <SettingsSubnav />
-        <div className="min-h-0 min-w-0 max-w-2xl overflow-y-auto">{children}</div>
+        <div className="min-h-0 min-w-0 max-w-2xl overflow-y-auto [html_&]:pr-4">{children}</div>
       </div>
     </div>
   );
