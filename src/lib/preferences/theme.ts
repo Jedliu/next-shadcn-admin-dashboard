@@ -28,6 +28,14 @@ export const THEME_PRESET_OPTIONS = [
     },
   },
   {
+    label: "Cyberpunk",
+    value: "cyberpunk",
+    primary: {
+      light: "#ff00c8",
+      dark: "#ff00c8",
+    },
+  },
+  {
     label: "Soft Pop",
     value: "soft-pop",
     primary: {
