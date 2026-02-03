@@ -5,6 +5,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 
 import { SearchDialog } from "@/app/(main)/dashboard/_components/sidebar/search-dialog";
+import { HudStats } from "@/components/hud-stats";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -62,6 +63,7 @@ export function AppHeader() {
         </Breadcrumb>
       </div>
       <div className="flex items-center gap-2">
+        <HudStats className="hidden md:flex" />
         <SearchDialog />
       </div>
     </header>

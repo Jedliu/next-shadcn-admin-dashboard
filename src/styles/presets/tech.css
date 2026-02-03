@@ -1,0 +1,230 @@
+/* 
+label: Tech
+value: tech 
+*/
+
+:root[data-theme-preset="tech"] {
+  --radius: 0px;
+
+  /* Laboratory Light Mode */
+  --background: oklch(0.98 0.01 240);
+  --foreground: oklch(0.2 0.05 240);
+
+  --card: oklch(0.96 0.01 240);
+  --card-foreground: oklch(0.2 0.05 240);
+
+  --popover: oklch(0.96 0.01 240);
+  --popover-foreground: oklch(0.2 0.05 240);
+
+  --primary: oklch(0.6 0.2 240); /* Deep Cyan */
+  --primary-foreground: oklch(0.98 0.01 240);
+
+  --secondary: oklch(0.9 0.05 240);
+  --secondary-foreground: oklch(0.2 0.05 240);
+
+  --muted: oklch(0.92 0.02 240);
+  --muted-foreground: oklch(0.5 0.05 240);
+
+  --accent: oklch(0.9 0.05 320);
+  --accent-foreground: oklch(0.6 0.2 320);
+
+  --destructive: oklch(0.6 0.2 20);
+  --border: oklch(0.85 0.05 240);
+  --input: oklch(0.85 0.05 240);
+  --ring: oklch(0.6 0.2 240);
+
+  --chart-1: oklch(0.6 0.2 240);
+  --chart-2: oklch(0.5 0.2 320);
+  --chart-3: oklch(0.6 0.2 140);
+  --chart-4: oklch(0.7 0.15 60);
+  --chart-5: oklch(0.5 0.1 280);
+
+  --sidebar: oklch(0.94 0.02 240);
+  --sidebar-foreground: oklch(0.2 0.05 240);
+  --sidebar-primary: oklch(0.6 0.2 240);
+  --sidebar-primary-foreground: oklch(0.98 0.01 240);
+  --sidebar-accent: oklch(0.9 0.05 240);
+  --sidebar-accent-foreground: oklch(0.6 0.2 240);
+  --sidebar-border: oklch(0.85 0.05 240);
+  --sidebar-ring: oklch(0.6 0.2 240);
+
+  /* Tech shadows are sharper */
+  --shadow-2xs: 1px 1px 0px 0px oklch(0.2 0.05 240 / 0.1);
+  --shadow-xs: 2px 2px 0px 0px oklch(0.2 0.05 240 / 0.1);
+  --shadow-sm: 2px 2px 0px 0px oklch(0.2 0.05 240 / 0.2);
+  --shadow: 4px 4px 0px 0px oklch(0.2 0.05 240 / 0.2);
+  --shadow-md: 6px 6px 0px 0px oklch(0.2 0.05 240 / 0.2);
+  --shadow-lg: 8px 8px 0px 0px oklch(0.2 0.05 240 / 0.2);
+  --shadow-xl: 12px 12px 0px 0px oklch(0.2 0.05 240 / 0.2);
+  --shadow-2xl: 16px 16px 0px 0px oklch(0.2 0.05 240 / 0.3);
+}
+
+.dark:root[data-theme-preset="tech"] {
+  /* Cyberpunk Dark Mode */
+  --background: oklch(0.15 0.05 240); /* Deep Blue-Black */
+  --foreground: oklch(0.9 0.05 240);
+
+  --card: oklch(0.18 0.05 240);
+  --card-foreground: oklch(0.9 0.05 240);
+
+  --popover: oklch(0.15 0.05 240);
+  --popover-foreground: oklch(0.9 0.05 240);
+
+  --primary: oklch(0.7 0.2 220); /* Cyan Neon */
+  --primary-foreground: oklch(0.15 0.05 240);
+
+  --secondary: oklch(0.25 0.05 240);
+  --secondary-foreground: oklch(0.9 0.05 240);
+
+  --muted: oklch(0.25 0.05 240);
+  --muted-foreground: oklch(0.7 0.05 240);
+
+  --accent: oklch(0.25 0.1 220);
+  --accent-foreground: oklch(0.7 0.2 220);
+
+  --destructive: oklch(0.6 0.2 20);
+  --destructive-foreground: oklch(0.9 0.05 240);
+
+  --border: oklch(0.3 0.1 240); /* Slightly visible borders */
+  --input: oklch(0.25 0.05 240);
+  --ring: oklch(0.7 0.2 220);
+
+  --chart-1: oklch(0.7 0.2 220); /* Cyan */
+  --chart-2: oklch(0.6 0.25 330); /* Magenta */
+  --chart-3: oklch(0.8 0.2 80); /* Amber */
+  --chart-4: oklch(0.6 0.2 150); /* Green */
+  --chart-5: oklch(0.5 0.2 280); /* Purple */
+
+  --sidebar: oklch(0.12 0.05 240);
+  --sidebar-foreground: oklch(0.9 0.05 240);
+  --sidebar-primary: oklch(0.7 0.2 220);
+  --sidebar-primary-foreground: oklch(0.15 0.05 240);
+  --sidebar-accent: oklch(0.2 0.1 220);
+  --sidebar-accent-foreground: oklch(0.7 0.2 220);
+  --sidebar-border: oklch(0.25 0.05 240);
+  --sidebar-ring: oklch(0.7 0.2 220);
+
+  /* Neon Glow Shadows */
+  --shadow-2xs: 0 0 2px oklch(0.7 0.2 220 / 0.1);
+  --shadow-xs: 0 0 4px oklch(0.7 0.2 220 / 0.15);
+  --shadow-sm: 0 0 6px oklch(0.7 0.2 220 / 0.2);
+  --shadow: 0 0 10px oklch(0.7 0.2 220 / 0.25);
+  --shadow-md: 0 0 15px oklch(0.7 0.2 220 / 0.3);
+  --shadow-lg: 0 0 25px oklch(0.7 0.2 220 / 0.35);
+  --shadow-xl: 0 0 40px oklch(0.7 0.2 220 / 0.4);
+  --shadow-2xl: 0 0 60px oklch(0.7 0.2 220 / 0.5);
+}
+
+/* 
+  Global overrides for the 'tech' preset
+*/
+[data-theme-preset="tech"] body {
+  background-image:
+    linear-gradient(to right, oklch(0.8 0.05 240 / 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.8 0.05 240 / 0.1) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-attachment: fixed;
+}
+
+.dark[data-theme-preset="tech"] body {
+  background-image:
+    linear-gradient(to right, oklch(0.3 0.1 240 / 0.2) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.3 0.1 240 / 0.2) 1px, transparent 1px);
+}
+
+/* Tech Scrollbar */
+[data-theme-preset="tech"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-theme-preset="tech"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme-preset="tech"] ::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 0;
+}
+
+[data-theme-preset="tech"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Tech Card Visuals (Corner Brackets) */
+[data-theme-preset="tech"] [data-slot="card"] {
+  position: relative;
+  overflow: visible;
+  border: 1px solid var(--border);
+}
+
+[data-theme-preset="tech"] [data-slot="card"]::before,
+[data-theme-preset="tech"] [data-slot="card"]::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--primary);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+[data-theme-preset="tech"] [data-slot="card"]::before {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+[data-theme-preset="tech"] [data-slot="card"]::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: 0;
+  border-top: 0;
+}
+
+[data-theme-preset="tech"] [data-slot="card"]:hover::before,
+[data-theme-preset="tech"] [data-slot="card"]:hover::after {
+  width: 24px;
+  height: 24px;
+  opacity: 1;
+  box-shadow: 0 0 8px var(--primary);
+}
+
+/* Tech Button Visuals */
+[data-theme-preset="tech"] [data-slot="button"][data-variant="default"] {
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 700;
+  border: 1px solid var(--primary-foreground);
+}
+
+[data-theme-preset="tech"] [data-slot="button"][data-variant="default"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+[data-theme-preset="tech"] [data-slot="button"][data-variant="default"]:hover::before {
+  left: 100%;
+}
+
+/* Tech Table Visuals */
+[data-theme-preset="tech"] [data-slot="table-head"] {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+[data-theme-preset="tech"] [data-slot="table-row"]:hover {
+  background-color: color-mix(in oklch, var(--primary) 10%, transparent);
+}
