@@ -155,7 +155,36 @@ value: tech
 [data-theme-preset="tech"] [data-slot="card"] {
   position: relative;
   overflow: visible;
-  border: 1px solid var(--border);
+  /* Make real border transparent so we can draw our own with gaps */
+  border-color: transparent; 
+  
+  /* Simulate borders with gaps at corners using gradients */
+  background-image: 
+    /* Top Line */
+    linear-gradient(to right, transparent 12px, var(--border) 12px, var(--border) calc(100% - 12px), transparent 12px),
+    /* Bottom Line */
+    linear-gradient(to right, transparent 12px, var(--border) 12px, var(--border) calc(100% - 12px), transparent 12px),
+    /* Left Line */
+    linear-gradient(to bottom, transparent 12px, var(--border) 12px, var(--border) calc(100% - 12px), transparent 12px),
+    /* Right Line */
+    linear-gradient(to bottom, transparent 12px, var(--border) 12px, var(--border) calc(100% - 12px), transparent 12px);
+  
+  background-position: 
+    top left,    /* Top */
+    bottom left, /* Bottom */
+    top left,    /* Left */
+    top right;   /* Right */
+    
+  background-size: 
+    100% 1px, /* Top width */
+    100% 1px, /* Bottom width */
+    1px 100%, /* Left height */
+    1px 100%; /* Right height */
+    
+  background-repeat: no-repeat;
+  
+  /* Ensure background draws over the transparent border area */
+  background-origin: border-box;
 }
 
 [data-theme-preset="tech"] [data-slot="card"]::before,
@@ -167,11 +196,12 @@ value: tech
   border: 2px solid var(--primary);
   transition: all 0.3s ease;
   pointer-events: none;
-  opacity: 0.6;
+  opacity: 1;
+  z-index: 10;
 }
 
 [data-theme-preset="tech"] [data-slot="card"]::before {
-  top: -1px;
+  top: -1px; /* Align with the transparent border edge */
   left: -1px;
   border-right: 0;
   border-bottom: 0;
@@ -186,10 +216,9 @@ value: tech
 
 [data-theme-preset="tech"] [data-slot="card"]:hover::before,
 [data-theme-preset="tech"] [data-slot="card"]:hover::after {
-  width: 24px;
-  height: 24px;
-  opacity: 1;
-  box-shadow: 0 0 8px var(--primary);
+  width: 40px;
+  height: 40px;
+  box-shadow: none;
 }
 
 /* Tech Button Visuals */
