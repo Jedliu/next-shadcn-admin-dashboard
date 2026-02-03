@@ -47,8 +47,8 @@ export const THEME_PRESET_OPTIONS = [
     label: "Tech",
     value: "tech",
     primary: {
-      light: "oklch(0.6 0.2 240)",
-      dark: "oklch(0.7 0.2 220)",
+      light: "oklch(0.55 0.22 240)",
+      dark: "oklch(0.75 0.2 230)",
     },
   },
 ] as const;
