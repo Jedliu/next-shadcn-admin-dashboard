@@ -164,7 +164,7 @@ export function LayoutControls() {
                   className={cn(
                     "group flex w-full items-center gap-3 rounded-md border p-3 text-left text-sm transition",
                     "hover:bg-muted/40",
-                    isActive ? "border-foreground/50 ring-2 ring-foreground/10" : "border-border",
+                    isActive ? "border-primary bg-primary/10 ring-2 ring-primary/20 shadow-sm" : "border-border",
                   )}
                   aria-pressed={isActive}
                 >

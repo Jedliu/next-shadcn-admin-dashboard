@@ -1067,7 +1067,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                         if (!hasAnyFilters) return;
                         setFiltersEnabled((prev) => !prev);
                       }}
-                      className="-ml-6 -translate-x-1 rounded-full transition-all duration-100 ease-linear data-[state=checked]:ml-0 data-[state=checked]:translate-x-0"
+                      className="rounded-full transition-all duration-100 ease-linear data-[state=unchecked]:-ml-6 data-[state=unchecked]:-translate-x-1 data-[state=checked]:ml-0 data-[state=checked]:translate-x-0 [html[data-theme-preset=brutalist]_&]:shadow-none [html[data-theme-preset=brutalist]_&]:data-[state=checked]:shadow-xs [html[data-theme-preset=brutalist]_&]:data-[state=unchecked]:opacity-0"
                     />
                     <FieldTitle>{showFiltered ? "Filtered" : "All"}</FieldTitle>
                   </Field>
