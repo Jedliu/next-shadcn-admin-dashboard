@@ -225,3 +225,76 @@ html {
     @apply bg-sidebar-accent border-l-4 border-sidebar-primary rounded-l-none pl-[calc(0.5rem-4px)] font-bold;
   }
 }
+
+@layer utilities {
+  @keyframes pf-flash-border {
+    0% {
+      opacity: 0;
+      box-shadow: inset 0 0 0 0 var(--pf-flash-color, var(--primary));
+    }
+    18% {
+      opacity: 0.75;
+      box-shadow: inset 0 0 0 1px var(--pf-flash-color, var(--primary));
+    }
+    45% {
+      opacity: 0.25;
+      box-shadow: inset 0 0 0 0 var(--pf-flash-color, var(--primary));
+    }
+    65% {
+      opacity: 0.85;
+      box-shadow: inset 0 0 0 1px var(--pf-flash-color, var(--primary));
+    }
+    100% {
+      opacity: 0;
+      box-shadow: inset 0 0 0 0 var(--pf-flash-color, var(--primary));
+    }
+  }
+
+  @keyframes pf-flash-border-alt {
+    0% {
+      opacity: 0;
+      box-shadow: inset 0 0 0 0 var(--pf-flash-color, var(--primary));
+    }
+    18% {
+      opacity: 0.75;
+      box-shadow: inset 0 0 0 1px var(--pf-flash-color, var(--primary));
+    }
+    45% {
+      opacity: 0.25;
+      box-shadow: inset 0 0 0 0 var(--pf-flash-color, var(--primary));
+    }
+    65% {
+      opacity: 0.85;
+      box-shadow: inset 0 0 0 1px var(--pf-flash-color, var(--primary));
+    }
+    100% {
+      opacity: 0;
+      box-shadow: inset 0 0 0 0 var(--pf-flash-color, var(--primary));
+    }
+  }
+
+  .pf-flash-border {
+    position: relative;
+    --pf-flash-color: var(--primary);
+  }
+
+  .pf-flash-border::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid var(--pf-flash-color, var(--primary));
+    pointer-events: none;
+    animation-duration: 1.05s;
+    animation-timing-function: ease-in-out;
+    animation-fill-mode: both;
+  }
+
+  .pf-flash-border[data-flash="0"]::after {
+    animation-name: pf-flash-border;
+  }
+
+  .pf-flash-border[data-flash="1"]::after {
+    animation-name: pf-flash-border-alt;
+  }
+}
