@@ -11,6 +11,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { SelectionActionBar } from "@/components/data-table/selection-action-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -328,6 +329,7 @@ export function PluginsPanel() {
     defaultPageSize: 10,
     getRowId: (row) => row.id,
   });
+  const selectedCount = table.getFilteredSelectedRowModel().rows.length;
 
   const configurePlugin = React.useMemo(
     () => (configurePluginId ? (plugins.find((p) => p.id === configurePluginId) ?? null) : null),
@@ -358,6 +360,22 @@ export function PluginsPanel() {
     };
     setPlugins((prev) => [next, ...prev]);
     toast.success(`Created plugin: ${name}`);
+  };
+
+  const handleDisableSelected = () => {
+    const selectedIds = table.getFilteredSelectedRowModel().rows.map((row) => row.original.id);
+    if (selectedIds.length === 0) return;
+    setPlugins((prev) =>
+      prev.map((plugin) => (selectedIds.includes(plugin.id) ? { ...plugin, status: "disabled" } : plugin)),
+    );
+    table.resetRowSelection();
+  };
+
+  const handleDeleteSelected = () => {
+    const selectedIds = table.getFilteredSelectedRowModel().rows.map((row) => row.original.id);
+    if (selectedIds.length === 0) return;
+    setPlugins((prev) => prev.filter((plugin) => !selectedIds.includes(plugin.id)));
+    table.resetRowSelection();
   };
 
   React.useEffect(() => {
@@ -496,6 +514,14 @@ export function PluginsPanel() {
           </div>
         )}
       </div>
+
+      <SelectionActionBar
+        count={selectedCount}
+        actions={[
+          { label: "Disable", icon: Power, onClick: handleDisableSelected },
+          { label: "Delete", icon: Trash2, onClick: handleDeleteSelected },
+        ]}
+      />
 
       <Dialog
         open={Boolean(configurePluginId)}

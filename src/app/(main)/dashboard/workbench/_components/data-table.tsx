@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import type { z } from "zod";
 
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
+import { SelectionActionBar } from "@/components/data-table/selection-action-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -906,6 +907,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
   );
   const hasAnyFilters = totalSelectedFilters > 0;
   const showFiltered = hasAnyFilters && filtersEnabled;
+  const selectedCount = table.getFilteredSelectedRowModel().rows.length;
 
   const appliedColumnFilters = React.useMemo(() => {
     if (!filtersEnabled) return [];
@@ -1188,6 +1190,13 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             showHeader={false}
           />
         </FiltersPanelDrawer>
+        <SelectionActionBar
+          count={selectedCount}
+          actions={[
+            { label: "Save as", icon: Copy },
+            { label: "Delete", icon: Trash2 },
+          ]}
+        />
       </div>
     </TableCellViewerProvider>
   );
