@@ -98,7 +98,7 @@ export function DataTable<TData, TValue>({
       className={cn("w-full caption-bottom text-sm table-fixed", className)}
       style={{ width: table.getTotalSize() }}
     >
-      <TableHeader className="sticky top-0 z-10 bg-muted">
+      <TableHeader className="sticky top-0 z-10 border-b bg-muted">
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id}>
             {headerGroup.headers.map((header) => {

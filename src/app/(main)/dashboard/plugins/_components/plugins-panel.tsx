@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -393,7 +392,7 @@ export function PluginsPanel() {
   }, [createMounted]);
 
   return (
-    <div className="@container/main flex h-full min-h-0 flex-col gap-6">
+    <div className="@container/main flex min-h-0 flex-1 flex-col gap-6 overflow-hidden">
       {/* ... (keep header and cards) */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
@@ -413,30 +412,30 @@ export function PluginsPanel() {
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className={cn("flex min-h-0 flex-1 flex-col gap-6", createMounted && "pointer-events-none")}>
-          <div className="grid @xl/main:grid-cols-3 gap-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Total</CardDescription>
-                <CardTitle className="text-3xl tabular-nums">{totalCount}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Enabled</CardDescription>
-                <CardTitle className="text-3xl text-emerald-600 tabular-nums">{enabledCount}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Disabled</CardDescription>
-                <CardTitle className="text-3xl text-destructive tabular-nums">{disabledCount}</CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
+          <div className="flex shrink-0 flex-col gap-4">
+            <div className="grid @xl/main:grid-cols-3 gap-3">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Total</CardDescription>
+                  <CardTitle className="text-3xl tabular-nums">{totalCount}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Enabled</CardDescription>
+                  <CardTitle className="text-3xl text-emerald-600 tabular-nums">{enabledCount}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Disabled</CardDescription>
+                  <CardTitle className="text-3xl text-destructive tabular-nums">{disabledCount}</CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-4">
             <div className="flex @md/main:flex-row flex-col @md/main:items-center @md/main:justify-between gap-3">
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                 <Input
@@ -468,16 +467,14 @@ export function PluginsPanel() {
                 <DataTableViewOptions table={table} />
               </div>
             </div>
+          </div>
 
-            <div className="relative overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:border-border before:border-b before:bg-muted">
-              <DataTable
-                table={table}
-                columns={columns}
-                className="relative z-10 w-auto [&_thead_tr]:border-transparent"
-              />
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:bg-muted">
+              <div className="relative z-10 min-h-0 flex-1 overflow-auto">
+                <DataTable table={table} columns={columns} className="w-auto [&_thead_tr]:border-transparent" />
+              </div>
             </div>
-
-            <DataTablePagination table={table} />
           </div>
         </div>
 

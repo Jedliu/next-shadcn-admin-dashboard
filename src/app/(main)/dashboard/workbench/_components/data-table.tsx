@@ -965,7 +965,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:items-stretch"
           >
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:border-border before:border-b before:bg-muted">
+              <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:bg-muted">
                 <div className="relative z-10 min-h-0 flex-1 overflow-auto">
                   <DataTableNew
                     dndEnabled

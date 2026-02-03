@@ -23,7 +23,7 @@ export function QuickCreateInset({ children }: { readonly children: React.ReactN
   }, []);
 
   return (
-    <div className="flex flex-1 min-h-0 gap-4 p-4 md:p-6">
+    <div className="flex flex-1 min-h-0 gap-4 overflow-hidden p-4 md:p-6">
       {open && pinned && (
         <aside className="hidden shrink-0 lg:block" style={{ width: `${panelWidth}px` }}>
           <section className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
@@ -111,7 +111,7 @@ export function QuickCreateInset({ children }: { readonly children: React.ReactN
         </aside>
       )}
 
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
     </div>
   );
 }
