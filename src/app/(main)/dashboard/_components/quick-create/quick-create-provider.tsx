@@ -94,7 +94,7 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
       setPendingPanel(null);
       return;
     }
-    const allowsHistory = pathname.startsWith("/dashboard/workbench") || pathname.startsWith("/dashboard/plugins");
+    const allowsHistory = pathname.startsWith("/dashboard/workspace") || pathname.startsWith("/dashboard/plugins");
     if (!allowsHistory) return;
 
     const panelParam = searchParams?.get("panel");
@@ -108,7 +108,7 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
 
   React.useEffect(() => {
     if (!pathname) return;
-    const allowsHistory = pathname.startsWith("/dashboard/workbench") || pathname.startsWith("/dashboard/plugins");
+    const allowsHistory = pathname.startsWith("/dashboard/workspace") || pathname.startsWith("/dashboard/plugins");
     if (allowsHistory) return;
     if (panel !== "history") return;
 

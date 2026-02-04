@@ -368,14 +368,14 @@ export function NavMain({ items }: NavMainProps) {
 
       if (action !== "history") return;
 
-      const allowsHistory = path.startsWith("/dashboard/workbench") || path.startsWith("/dashboard/plugins");
+      const allowsHistory = path.startsWith("/dashboard/workspace") || path.startsWith("/dashboard/plugins");
       if (allowsHistory) {
         openPanel("history");
         return;
       }
 
       requestPanelOpen("history");
-      router.push("/dashboard/workbench");
+      router.push("/dashboard/workspace");
     },
     [openPanel, path, requestPanelOpen, router, togglePanel],
   );

@@ -40,12 +40,12 @@ export const sidebarItems: NavGroup[] = [
     items: [
       {
         title: "Workspace",
-        url: "/dashboard/workbench",
+        url: "/dashboard/workspace",
         icon: LayoutDashboard,
       },
       {
         title: "History",
-        url: "/dashboard/workbench/history",
+        url: "/dashboard/workspace/history",
         icon: History,
         action: "history",
       },
