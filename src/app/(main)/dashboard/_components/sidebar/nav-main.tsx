@@ -241,6 +241,7 @@ export function NavMain({ items }: NavMainProps) {
     setPinned: setQuickCreatePinned,
     openPanel,
     togglePanel,
+    requestPanelOpen,
   } = useQuickCreate();
   const [sidebarRight, setSidebarRight] = React.useState(0);
   const sidebarRightRef = React.useRef(0);
@@ -373,14 +374,10 @@ export function NavMain({ items }: NavMainProps) {
         return;
       }
 
-      try {
-        window.sessionStorage.setItem("open-history-panel", "1");
-      } catch {
-        // ignore storage errors
-      }
+      requestPanelOpen("history");
       router.push("/dashboard/workbench");
     },
-    [openPanel, path, router, togglePanel],
+    [openPanel, path, requestPanelOpen, router, togglePanel],
   );
 
   return (

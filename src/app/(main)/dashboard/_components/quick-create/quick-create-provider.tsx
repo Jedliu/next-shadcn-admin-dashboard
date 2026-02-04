@@ -25,6 +25,7 @@ type QuickCreateContextValue = {
   togglePinned: () => void;
   openPanel: (panel: "quick-create" | "history") => void;
   togglePanel: (panel: "quick-create" | "history") => void;
+  requestPanelOpen: (panel: "quick-create" | "history") => void;
 };
 
 const QuickCreateContext = React.createContext<QuickCreateContextValue | null>(null);
@@ -42,6 +43,7 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
   const [historyTab, setHistoryTab] = React.useState<"all" | "manual" | "auto">("all");
   const [historySearch, setHistorySearch] = React.useState("");
   const [historySelectedId, setHistorySelectedId] = React.useState<string | null>(null);
+  const [pendingPanel, setPendingPanel] = React.useState<"quick-create" | "history" | null>(null);
 
   const open = panelState.open;
   const panel = panelState.panel;
@@ -81,34 +83,28 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
     }));
   }, []);
 
+  const requestPanelOpen = React.useCallback((nextPanel: "quick-create" | "history") => {
+    setPendingPanel(nextPanel);
+  }, []);
+
   React.useEffect(() => {
     if (!pathname) return;
+    if (pendingPanel === "quick-create") {
+      setPanelState((prev) => ({ ...prev, open: true, panel: "quick-create" }));
+      setPendingPanel(null);
+      return;
+    }
     const allowsHistory = pathname.startsWith("/dashboard/workbench") || pathname.startsWith("/dashboard/plugins");
     if (!allowsHistory) return;
 
     const panelParam = searchParams?.get("panel");
-    let shouldOpen = panelParam === "history";
-
-    if (!shouldOpen) {
-      try {
-        shouldOpen = window.sessionStorage.getItem("open-history-panel") === "1";
-      } catch {
-        shouldOpen = false;
-      }
-    }
+    const shouldOpen = panelParam === "history" || pendingPanel === "history";
 
     if (!shouldOpen) return;
 
     setPanelState((prev) => ({ ...prev, open: true, panel: "history" }));
-
-    if (panelParam !== "history") {
-      try {
-        window.sessionStorage.removeItem("open-history-panel");
-      } catch {
-        // ignore storage errors
-      }
-    }
-  }, [pathname, searchParams]);
+    if (pendingPanel === "history") setPendingPanel(null);
+  }, [pathname, pendingPanel, searchParams]);
 
   React.useEffect(() => {
     if (!pathname) return;
@@ -142,6 +138,7 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
       togglePinned,
       openPanel,
       togglePanel,
+      requestPanelOpen,
     }),
     [
       open,
@@ -158,6 +155,7 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
       togglePinned,
       openPanel,
       togglePanel,
+      requestPanelOpen,
     ],
   );
 
