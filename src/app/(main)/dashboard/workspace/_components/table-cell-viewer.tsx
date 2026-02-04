@@ -13,7 +13,10 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFloatingPanel } from "@/hooks/use-floating-panel";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePointerResize } from "@/hooks/use-pointer-resize";
+import { clampPanelWidth } from "@/lib/panel-utils";
 import { cn } from "@/lib/utils";
 
 import type { sectionSchema } from "./schema";
@@ -327,17 +330,6 @@ export function TableCellViewerDrawer() {
   const { open, pinned, item, panelWidth, drafts, setDrafts, setOpen, setPinned, setPanelWidth } = useTableCellViewer();
   const contentRef = React.useRef<HTMLDivElement | null>(null);
   const isMountedRef = React.useRef(false);
-  const isResizingRef = React.useRef(false);
-  const resizeStartXRef = React.useRef(0);
-  const resizeStartWidthRef = React.useRef(0);
-  const prevUserSelectRef = React.useRef<string | null>(null);
-  const [desktopPosition, setDesktopPosition] = React.useState<null | { top: number; right: number; bottom: number }>(
-    null,
-  );
-  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
-  const [mounted, setMounted] = React.useState(false);
-  const [visible, setVisible] = React.useState(false);
-  const unmountTimeoutRef = React.useRef<number | null>(null);
   const DESKTOP_FLOATING_ANIMATION_MS = 500; // Match Vaul's default timing.
 
   React.useEffect(() => {
@@ -347,12 +339,25 @@ export function TableCellViewerDrawer() {
     };
   }, []);
 
-  const clampWidth = React.useCallback((width: number) => {
-    const min = 360; // 22.5rem
-    // Allow resizing up to ~50% of the available viewport width (minus the drawer inset).
-    const max = typeof window !== "undefined" ? Math.floor((window.innerWidth - 48) * 0.5) : 720;
-    return Math.max(min, Math.min(max, Math.round(width)));
-  }, []);
+  const clampWidth = React.useCallback((width: number) => clampPanelWidth(width, { min: 360 }), []);
+  const resizeHandle = usePointerResize({
+    direction: "left",
+    getWidth: () => panelWidth,
+    setWidth: setPanelWidth,
+    clamp: clampWidth,
+  });
+  const {
+    portalTarget,
+    position: desktopPosition,
+    mounted,
+    visible,
+  } = useFloatingPanel({
+    isMobile,
+    open,
+    anchorSelector: '[data-slot="table-cell-viewer-anchor"]',
+    enabled: Boolean(item) && !pinned,
+    animationMs: DESKTOP_FLOATING_ANIMATION_MS,
+  });
 
   React.useEffect(() => {
     if (isMobile) return;
@@ -367,109 +372,6 @@ export function TableCellViewerDrawer() {
     if (!isMobile || !pinned) return;
     setPinned(false);
   }, [isMobile, pinned, setPinned]);
-
-  React.useEffect(() => {
-    if (isMobile) return;
-    setPortalTarget(document.body);
-  }, [isMobile]);
-
-  React.useEffect(() => {
-    if (isMobile || pinned) {
-      // When pinned (inset) or on mobile, the drawer shouldn't manage a desktop-positioned box.
-      setDesktopPosition(null);
-      return;
-    }
-
-    // Keep the last computed desktopPosition while closing so the floating panel doesn't "jump"
-    // during the close animation.
-    if (!open) return;
-
-    let raf = 0;
-
-    const update = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        if (!isMountedRef.current) return;
-        const anchor = document.querySelector<HTMLElement>('[data-slot="table-cell-viewer-anchor"]');
-        const rect = anchor?.getBoundingClientRect();
-        if (!rect) return;
-        setDesktopPosition({
-          top: Math.round(rect.top),
-          right: Math.max(0, Math.round(window.innerWidth - rect.right)),
-          bottom: Math.max(0, Math.round(window.innerHeight - rect.bottom)),
-        });
-      });
-    };
-
-    update();
-    window.addEventListener("resize", update);
-    // Use capture to catch scroll events from nested scroll containers.
-    window.addEventListener("scroll", update, true);
-
-    const anchor = document.querySelector<HTMLElement>('[data-slot="table-cell-viewer-anchor"]');
-    const ro = anchor ? new ResizeObserver(update) : null;
-    if (anchor && ro) ro.observe(anchor);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
-      ro?.disconnect();
-    };
-  }, [isMobile, open, pinned]);
-
-  // Desktop: render a floating panel (not Vaul) so the close animation is smooth and consistent.
-  React.useEffect(() => {
-    if (isMobile) return;
-    if (unmountTimeoutRef.current) {
-      window.clearTimeout(unmountTimeoutRef.current);
-      unmountTimeoutRef.current = null;
-    }
-
-    // If we don't have content, unmount immediately.
-    if (!item) {
-      setVisible(false);
-      setMounted(false);
-      return;
-    }
-
-    // When pinned (inset), the floating panel shouldn't exist.
-    if (pinned) {
-      setVisible(false);
-      setMounted(false);
-      return;
-    }
-
-    if (open && !pinned) {
-      setMounted(true);
-      // Ensure we start from the "hidden" state so the entrance animation is visible.
-      setVisible(false);
-      return;
-    }
-
-    // Closing: animate out, then unmount after the transition.
-    setVisible(false);
-    unmountTimeoutRef.current = window.setTimeout(() => {
-      if (!isMountedRef.current) return;
-      setMounted(false);
-    }, DESKTOP_FLOATING_ANIMATION_MS);
-    return () => {
-      if (unmountTimeoutRef.current) {
-        window.clearTimeout(unmountTimeoutRef.current);
-        unmountTimeoutRef.current = null;
-      }
-    };
-  }, [isMobile, open, pinned, item]);
-
-  React.useEffect(() => {
-    if (isMobile) return;
-    if (!mounted) return;
-    const raf = requestAnimationFrame(() => {
-      if (!isMountedRef.current) return;
-      setVisible(true);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [isMobile, mounted]);
 
   if (!isMobile) {
     if (!item || !portalTarget || !mounted || !desktopPosition) return null;
@@ -500,36 +402,10 @@ export function TableCellViewerDrawer() {
             aria-hidden="true"
             title="Resize"
             className="group absolute inset-y-0 left-0 z-20 w-3 cursor-col-resize touch-none select-none"
-            onPointerDown={(e) => {
-              if (e.button !== 0) return;
-              isResizingRef.current = true;
-              resizeStartXRef.current = e.clientX;
-              resizeStartWidthRef.current = panelWidth;
-              prevUserSelectRef.current = document.body.style.userSelect;
-              document.body.style.userSelect = "none";
-              (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-            }}
-            onPointerMove={(e) => {
-              if (!isResizingRef.current) return;
-              const delta = resizeStartXRef.current - e.clientX;
-              setPanelWidth(clampWidth(resizeStartWidthRef.current + delta));
-            }}
-            onPointerUp={(e) => {
-              if (!isResizingRef.current) return;
-              isResizingRef.current = false;
-              document.body.style.userSelect = prevUserSelectRef.current ?? "";
-              prevUserSelectRef.current = null;
-              try {
-                (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-              } catch {
-                // ignore
-              }
-            }}
-            onPointerCancel={() => {
-              isResizingRef.current = false;
-              document.body.style.userSelect = prevUserSelectRef.current ?? "";
-              prevUserSelectRef.current = null;
-            }}
+            onPointerDown={resizeHandle.onPointerDown}
+            onPointerMove={resizeHandle.onPointerMove}
+            onPointerUp={resizeHandle.onPointerUp}
+            onPointerCancel={resizeHandle.onPointerCancel}
           >
             <div className="absolute inset-y-0 left-0 w-px bg-border" />
             <div className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-0 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
@@ -599,36 +475,10 @@ export function TableCellViewerDrawer() {
             aria-hidden="true"
             title="Resize"
             className="group absolute inset-y-0 left-0 z-20 w-3 cursor-col-resize touch-none select-none"
-            onPointerDown={(e) => {
-              if (e.button !== 0) return;
-              isResizingRef.current = true;
-              resizeStartXRef.current = e.clientX;
-              resizeStartWidthRef.current = panelWidth;
-              prevUserSelectRef.current = document.body.style.userSelect;
-              document.body.style.userSelect = "none";
-              (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-            }}
-            onPointerMove={(e) => {
-              if (!isResizingRef.current) return;
-              const delta = resizeStartXRef.current - e.clientX;
-              setPanelWidth(clampWidth(resizeStartWidthRef.current + delta));
-            }}
-            onPointerUp={(e) => {
-              if (!isResizingRef.current) return;
-              isResizingRef.current = false;
-              document.body.style.userSelect = prevUserSelectRef.current ?? "";
-              prevUserSelectRef.current = null;
-              try {
-                (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-              } catch {
-                // ignore
-              }
-            }}
-            onPointerCancel={() => {
-              isResizingRef.current = false;
-              document.body.style.userSelect = prevUserSelectRef.current ?? "";
-              prevUserSelectRef.current = null;
-            }}
+            onPointerDown={resizeHandle.onPointerDown}
+            onPointerMove={resizeHandle.onPointerMove}
+            onPointerUp={resizeHandle.onPointerUp}
+            onPointerCancel={resizeHandle.onPointerCancel}
           >
             <div className="absolute inset-y-0 left-0 w-px bg-border" />
             <div className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-0 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">
@@ -654,17 +504,13 @@ export function TableCellViewerInset() {
   const isMobile = useIsMobile();
   const { open, pinned, item, panelWidth, drafts, setDrafts, setOpen, setPinned, setPanelWidth } = useTableCellViewer();
   const sectionRef = React.useRef<HTMLElement | null>(null);
-  const isResizingRef = React.useRef(false);
-  const resizeStartXRef = React.useRef(0);
-  const resizeStartWidthRef = React.useRef(0);
-  const prevUserSelectRef = React.useRef<string | null>(null);
-
-  const clampWidth = React.useCallback((width: number) => {
-    const min = 360; // 22.5rem
-    // Allow resizing up to ~50% of the available viewport width (minus the drawer inset).
-    const max = typeof window !== "undefined" ? Math.floor((window.innerWidth - 48) * 0.5) : 720;
-    return Math.max(min, Math.min(max, Math.round(width)));
-  }, []);
+  const clampWidth = React.useCallback((width: number) => clampPanelWidth(width, { min: 360 }), []);
+  const resizeHandle = usePointerResize({
+    direction: "left",
+    getWidth: () => panelWidth,
+    setWidth: setPanelWidth,
+    clamp: clampWidth,
+  });
 
   // Match Quick Create's pinned (inset) behavior: no enter/exit animation.
   if (!item || isMobile || !open || !pinned) return null;
@@ -684,36 +530,10 @@ export function TableCellViewerInset() {
           aria-hidden="true"
           title="Resize"
           className="group absolute top-0 bottom-0 left-0 z-20 w-3 cursor-col-resize touch-none select-none"
-          onPointerDown={(e) => {
-            if (e.button !== 0) return;
-            isResizingRef.current = true;
-            resizeStartXRef.current = e.clientX;
-            resizeStartWidthRef.current = panelWidth;
-            prevUserSelectRef.current = document.body.style.userSelect;
-            document.body.style.userSelect = "none";
-            (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-          }}
-          onPointerMove={(e) => {
-            if (!isResizingRef.current) return;
-            const delta = resizeStartXRef.current - e.clientX;
-            setPanelWidth(clampWidth(resizeStartWidthRef.current + delta));
-          }}
-          onPointerUp={(e) => {
-            if (!isResizingRef.current) return;
-            isResizingRef.current = false;
-            document.body.style.userSelect = prevUserSelectRef.current ?? "";
-            prevUserSelectRef.current = null;
-            try {
-              (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-            } catch {
-              // ignore
-            }
-          }}
-          onPointerCancel={() => {
-            isResizingRef.current = false;
-            document.body.style.userSelect = prevUserSelectRef.current ?? "";
-            prevUserSelectRef.current = null;
-          }}
+          onPointerDown={resizeHandle.onPointerDown}
+          onPointerMove={resizeHandle.onPointerMove}
+          onPointerUp={resizeHandle.onPointerUp}
+          onPointerCancel={resizeHandle.onPointerCancel}
         >
           <div className="absolute top-0 bottom-0 left-0 w-px bg-border" />
           <div className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-0 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">

@@ -20,7 +20,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
+import { useFloatingPanel } from "@/hooks/use-floating-panel";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePointerResize } from "@/hooks/use-pointer-resize";
+import { clampPanelWidth } from "@/lib/panel-utils";
 import { cn } from "@/lib/utils";
 
 import { DataTable as DataTableNew } from "../../../../../components/data-table/data-table";
@@ -549,37 +552,26 @@ function FiltersPanelDrawer({
 }) {
   const isMobile = useIsMobile();
   const contentRef = React.useRef<HTMLDivElement | null>(null);
-  const isMountedRef = React.useRef(false);
-  const isResizingRef = React.useRef(false);
-  const resizeStartXRef = React.useRef(0);
-  const resizeStartWidthRef = React.useRef(0);
-  const prevUserSelectRef = React.useRef<string | null>(null);
-  const [desktopPosition, setDesktopPosition] = React.useState<null | { top: number; right: number; bottom: number }>(
-    null,
-  );
-  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
-  const [mounted, setMounted] = React.useState(false);
-  const [visible, setVisible] = React.useState(false);
-  const unmountTimeoutRef = React.useRef<number | null>(null);
   const DESKTOP_FLOATING_ANIMATION_MS = 500; // Match the existing right panel animation.
 
-  React.useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const clampWidth = React.useCallback((width: number) => {
-    const min = 360; // 22.5rem
-    const max = typeof window !== "undefined" ? Math.floor((window.innerWidth - 48) * 0.5) : 720;
-    return Math.max(min, Math.min(max, Math.round(width)));
-  }, []);
-
-  React.useEffect(() => {
-    if (isMobile) return;
-    setPortalTarget(document.body);
-  }, [isMobile]);
+  const clampWidth = React.useCallback((width: number) => clampPanelWidth(width, { min: 360 }), []);
+  const resizeHandle = usePointerResize({
+    direction: "left",
+    getWidth: () => panelWidth,
+    setWidth: setPanelWidth,
+    clamp: clampWidth,
+  });
+  const {
+    portalTarget,
+    position: desktopPosition,
+    mounted,
+    visible,
+  } = useFloatingPanel({
+    isMobile,
+    open,
+    anchorSelector: '[data-slot="table-cell-viewer-anchor"]',
+    animationMs: DESKTOP_FLOATING_ANIMATION_MS,
+  });
 
   React.useEffect(() => {
     if (isMobile) return;
@@ -587,85 +579,6 @@ function FiltersPanelDrawer({
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, [clampWidth, isMobile, setPanelWidth]);
-
-  React.useEffect(() => {
-    if (isMobile) {
-      setDesktopPosition(null);
-      return;
-    }
-
-    // Keep the last computed position while closing so the panel doesn't "jump" during the animation.
-    if (!open) return;
-
-    let raf = 0;
-    const update = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        if (!isMountedRef.current) return;
-        const anchor = document.querySelector<HTMLElement>('[data-slot="table-cell-viewer-anchor"]');
-        const rect = anchor?.getBoundingClientRect();
-        if (!rect) return;
-        setDesktopPosition({
-          top: Math.round(rect.top),
-          right: Math.max(0, Math.round(window.innerWidth - rect.right)),
-          bottom: Math.max(0, Math.round(window.innerHeight - rect.bottom)),
-        });
-      });
-    };
-
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
-
-    const anchor = document.querySelector<HTMLElement>('[data-slot="table-cell-viewer-anchor"]');
-    const ro = anchor ? new ResizeObserver(update) : null;
-    if (anchor && ro) ro.observe(anchor);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
-      ro?.disconnect();
-    };
-  }, [isMobile, open]);
-
-  React.useEffect(() => {
-    if (isMobile) return;
-    if (unmountTimeoutRef.current) {
-      window.clearTimeout(unmountTimeoutRef.current);
-      unmountTimeoutRef.current = null;
-    }
-
-    if (open) {
-      setMounted(true);
-      // Start from hidden so the entrance animation is visible.
-      setVisible(false);
-      return;
-    }
-
-    // Closing: animate out, then unmount after the transition.
-    setVisible(false);
-    unmountTimeoutRef.current = window.setTimeout(() => {
-      if (!isMountedRef.current) return;
-      setMounted(false);
-    }, DESKTOP_FLOATING_ANIMATION_MS);
-    return () => {
-      if (unmountTimeoutRef.current) {
-        window.clearTimeout(unmountTimeoutRef.current);
-        unmountTimeoutRef.current = null;
-      }
-    };
-  }, [isMobile, open]);
-
-  React.useEffect(() => {
-    if (isMobile) return;
-    if (!mounted || !desktopPosition) return;
-    const raf = requestAnimationFrame(() => {
-      if (!isMountedRef.current) return;
-      setVisible(true);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [desktopPosition, isMobile, mounted]);
 
   if (!isMobile) {
     if (!portalTarget || !mounted || !desktopPosition) return null;
@@ -693,36 +606,10 @@ function FiltersPanelDrawer({
             aria-hidden="true"
             title="Resize"
             className="group absolute inset-y-0 left-0 z-20 w-3 cursor-col-resize touch-none select-none"
-            onPointerDown={(e) => {
-              if (e.button !== 0) return;
-              isResizingRef.current = true;
-              resizeStartXRef.current = e.clientX;
-              resizeStartWidthRef.current = panelWidth;
-              prevUserSelectRef.current = document.body.style.userSelect;
-              document.body.style.userSelect = "none";
-              (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-            }}
-            onPointerMove={(e) => {
-              if (!isResizingRef.current) return;
-              const delta = resizeStartXRef.current - e.clientX;
-              setPanelWidth(clampWidth(resizeStartWidthRef.current + delta));
-            }}
-            onPointerUp={(e) => {
-              if (!isResizingRef.current) return;
-              isResizingRef.current = false;
-              document.body.style.userSelect = prevUserSelectRef.current ?? "";
-              prevUserSelectRef.current = null;
-              try {
-                (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-              } catch {
-                // ignore
-              }
-            }}
-            onPointerCancel={() => {
-              isResizingRef.current = false;
-              document.body.style.userSelect = prevUserSelectRef.current ?? "";
-              prevUserSelectRef.current = null;
-            }}
+            onPointerDown={resizeHandle.onPointerDown}
+            onPointerMove={resizeHandle.onPointerMove}
+            onPointerUp={resizeHandle.onPointerUp}
+            onPointerCancel={resizeHandle.onPointerCancel}
           >
             <div className="absolute inset-y-0 left-0 w-px bg-border" />
             <div className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-0 translate-x-0.5 opacity-0 transition-opacity group-hover:opacity-100">

@@ -5,11 +5,12 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-import { ChevronRight, GripVerticalIcon, MailIcon, Pin, PlusCircleIcon, XIcon } from "lucide-react";
+import { ChevronRight, GripVerticalIcon, MailIcon, PlusCircleIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 
 import { HistoryPanel } from "@/app/(main)/dashboard/_components/quick-create/history-panel";
 import { QuickCreateActions } from "@/app/(main)/dashboard/_components/quick-create/quick-create-actions";
+import { QuickCreatePanelHeader } from "@/app/(main)/dashboard/_components/quick-create/quick-create-panel-header";
 import { useQuickCreate } from "@/app/(main)/dashboard/_components/quick-create/quick-create-provider";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -33,6 +34,8 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { usePointerResize } from "@/hooks/use-pointer-resize";
+import { clampPanelWidth } from "@/lib/panel-utils";
 import { cn } from "@/lib/utils";
 import type { NavGroup, NavMainItem } from "@/navigation/sidebar/sidebar-items";
 
@@ -246,23 +249,20 @@ export function NavMain({ items }: NavMainProps) {
   const [sidebarRight, setSidebarRight] = React.useState(0);
   const sidebarRightRef = React.useRef(0);
   const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
-  const isResizingRef = React.useRef(false);
-  const resizeStartXRef = React.useRef(0);
-  const resizeStartWidthRef = React.useRef(0);
-  const prevUserSelectRef = React.useRef<string | null>(null);
-
-  const clampPanelWidth = React.useCallback((width: number) => {
-    const min = 320; // 20rem
-    const max = typeof window !== "undefined" ? Math.floor((window.innerWidth - 48) * 0.5) : 720;
-    return Math.max(min, Math.min(max, Math.round(width)));
-  }, []);
+  const clampWidth = React.useCallback((width: number) => clampPanelWidth(width, { min: 320 }), []);
+  const resizeHandle = usePointerResize({
+    direction: "right",
+    getWidth: () => panelWidth,
+    setWidth: setPanelWidth,
+    clamp: clampWidth,
+  });
 
   React.useEffect(() => {
     if (isMobile) return;
-    const onResize = () => setPanelWidth((w) => clampPanelWidth(w));
+    const onResize = () => setPanelWidth((w) => clampWidth(w));
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [clampPanelWidth, isMobile, setPanelWidth]);
+  }, [clampWidth, isMobile, setPanelWidth]);
 
   const getSidebarRight = React.useCallback(() => {
     // `sidebar-inner` reflects the visible sidebar edge for all variants.
@@ -450,36 +450,10 @@ export function NavMain({ items }: NavMainProps) {
                 aria-hidden="true"
                 title="Resize"
                 className="group absolute inset-y-0 right-0 z-20 w-3 cursor-col-resize touch-none select-none"
-                onPointerDown={(e) => {
-                  if (e.button !== 0) return;
-                  isResizingRef.current = true;
-                  resizeStartXRef.current = e.clientX;
-                  resizeStartWidthRef.current = panelWidth;
-                  prevUserSelectRef.current = document.body.style.userSelect;
-                  document.body.style.userSelect = "none";
-                  (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-                }}
-                onPointerMove={(e) => {
-                  if (!isResizingRef.current) return;
-                  const delta = e.clientX - resizeStartXRef.current;
-                  setPanelWidth(clampPanelWidth(resizeStartWidthRef.current + delta));
-                }}
-                onPointerUp={(e) => {
-                  if (!isResizingRef.current) return;
-                  isResizingRef.current = false;
-                  document.body.style.userSelect = prevUserSelectRef.current ?? "";
-                  prevUserSelectRef.current = null;
-                  try {
-                    (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-                  } catch {
-                    // ignore
-                  }
-                }}
-                onPointerCancel={() => {
-                  isResizingRef.current = false;
-                  document.body.style.userSelect = prevUserSelectRef.current ?? "";
-                  prevUserSelectRef.current = null;
-                }}
+                onPointerDown={resizeHandle.onPointerDown}
+                onPointerMove={resizeHandle.onPointerMove}
+                onPointerUp={resizeHandle.onPointerUp}
+                onPointerCancel={resizeHandle.onPointerCancel}
               >
                 <div className="absolute inset-y-0 right-0 w-px bg-border" />
                 <div className="-translate-x-0.5 -translate-y-1/2 pointer-events-none absolute top-1/2 right-0 opacity-0 transition-opacity group-hover:opacity-100">
@@ -488,43 +462,11 @@ export function NavMain({ items }: NavMainProps) {
                   </div>
                 </div>
               </div>
-              <div
-                className={cn(
-                  "flex items-start justify-between gap-3 border-b bg-muted/50",
-                  panel === "history" ? "p-3" : "p-4",
-                )}
-              >
-                <div className="min-w-0">
-                  <h2 className={cn("truncate", panel === "history" ? "font-medium text-sm" : "font-semibold")}>
-                    {panel === "history" ? "History" : "Quick Create"}
-                  </h2>
-                  {panel === "history" ? null : (
-                    <p className="text-muted-foreground text-sm">
-                      Create common items without leaving your current page.
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setQuickCreatePinned(true)}
-                    title="Pin"
-                    className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  >
-                    <Pin className="size-4" />
-                    <span className="sr-only">Pin</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuickCreateOpen(false)}
-                    title="Close"
-                    className="inline-flex size-8 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  >
-                    <span className="sr-only">Close</span>
-                    <XIcon className="size-4" />
-                  </button>
-                </div>
-              </div>
+              <QuickCreatePanelHeader
+                panel={panel}
+                onPin={() => setQuickCreatePinned(true)}
+                onClose={() => setQuickCreateOpen(false)}
+              />
               {panel === "history" ? (
                 <HistoryPanel className="flex-1" />
               ) : (
