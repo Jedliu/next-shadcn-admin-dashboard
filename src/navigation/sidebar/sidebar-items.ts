@@ -1,6 +1,6 @@
-import { Fingerprint, History, LayoutDashboard, type LucideIcon, Puzzle } from "lucide-react";
+import { History, LayoutDashboard, type LucideIcon, Puzzle } from "lucide-react";
 
-import { processFiltersNavItem } from "@/navigation/process-filters/process-filters-nav";
+import { processFiltersSidebarItem } from "@/navigation/process-filters/process-filters-nav";
 import { proxyNavItem } from "@/navigation/proxy/proxy-nav";
 import { settingsNavItem } from "@/navigation/settings/settings-nav";
 
@@ -39,17 +39,17 @@ export const sidebarItems: NavGroup[] = [
     label: "Dashboards",
     items: [
       {
-        title: "Workbench",
+        title: "Workspace",
         url: "/dashboard/workbench",
         icon: LayoutDashboard,
       },
-      processFiltersNavItem,
       {
         title: "History",
         url: "/dashboard/workbench/history",
         icon: History,
         action: "history",
       },
+      processFiltersSidebarItem,
       {
         title: "Plugins",
         url: "/dashboard/plugins",
@@ -59,24 +59,20 @@ export const sidebarItems: NavGroup[] = [
   },
   {
     id: 2,
-    label: "Pages",
-    items: [
-      {
-        title: "Authentication",
-        url: "/auth",
-        icon: Fingerprint,
-        subItems: [
-          { title: "Login v1", url: "/auth/v1/login", newTab: true },
-          { title: "Login v2", url: "/auth/v2/login", newTab: true },
-          { title: "Register v1", url: "/auth/v1/register", newTab: true },
-          { title: "Register v2", url: "/auth/v2/register", newTab: true },
-        ],
-      },
-    ],
+    label: "Proxy",
+    items: (proxyNavItem.subItems ?? []).map((item) => ({
+      title: item.title,
+      url: item.url,
+      icon: item.icon,
+    })),
   },
   {
     id: 3,
-    label: "Misc",
-    items: [proxyNavItem, settingsNavItem],
+    label: "Settings",
+    items: (settingsNavItem.subItems ?? []).map((item) => ({
+      title: item.title,
+      url: item.url,
+      icon: item.icon,
+    })),
   },
 ];
