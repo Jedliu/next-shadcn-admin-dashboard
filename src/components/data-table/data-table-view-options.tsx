@@ -18,7 +18,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Column, Table as TanStackTable } from "@tanstack/react-table";
-import { GripVertical, ListRestart, Settings2, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, Columns2, GripVertical, ListRestart, SlidersHorizontal } from "lucide-react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
 import { Button } from "@/components/ui/button";
@@ -207,9 +207,11 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
       }}
     >
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="ml-auto hidden h-8 lg:flex">
-          <Settings2 />
-          View
+        <Button variant="outline" size="sm" className="h-8">
+          <Columns2 />
+          <span className="hidden lg:inline">Customize Columns</span>
+          <span className="lg:hidden">Columns</span>
+          <ChevronDown />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[220px]">

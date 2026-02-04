@@ -965,10 +965,16 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                     className="h-8 pl-9"
                   />
                 </div>
-                <FieldLabel htmlFor="filters-enabled" className="!w-fit">
+                <FieldLabel
+                  htmlFor="filters-enabled"
+                  className={cn("!w-fit", hasAnyFilters && "cursor-pointer border-primary")}
+                >
                   <Field
                     orientation="horizontal"
-                    className="!px-3 !py-1.5 group-has-data-[state=checked]/field-label:!px-2 gap-1.5 overflow-hidden transition-all duration-100 ease-linear"
+                    className={cn(
+                      "!px-3 !py-1.5 group-has-data-[state=checked]/field-label:!px-2 gap-1.5 overflow-hidden transition-all duration-100 ease-linear",
+                      hasAnyFilters && "border-primary text-primary hover:bg-primary/10",
+                    )}
                   >
                     <Checkbox
                       id="filters-enabled"

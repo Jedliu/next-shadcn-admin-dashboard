@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, Play, Power, Settings2, ShieldCheck, Wifi } from "lucide-react";
+import { Info, Lock, Play, Power, Settings2, Wifi } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -118,7 +118,7 @@ export function AgentPanel() {
       <Card className="py-4">
         <CardHeader className="px-5">
           <CardTitle className="flex items-center gap-2 text-base">
-            <ShieldCheck className="size-4 text-muted-foreground" />
+            <Info className="size-4 text-muted-foreground" />
             Notes
           </CardTitle>
           <CardDescription>After starting the agent, configure your browser or OS to use it.</CardDescription>

@@ -45,6 +45,12 @@ export function SystemProxyPanel() {
             )}
           </CardDescription>
         </CardHeader>
+        <CardContent className="px-5">
+          <Button type="button" variant="destructive" onClick={clearSystemProxy}>
+            <Trash2 />
+            Clear system proxy
+          </Button>
+        </CardContent>
       </Card>
 
       <Card className="py-4">
@@ -81,21 +87,25 @@ export function SystemProxyPanel() {
                 <RefreshCcw />
                 Restore original proxy
               </Button>
-              <Button type="button" size="lg" variant="destructive" onClick={clearSystemProxy}>
-                <Trash2 />
-                Clear system proxy
-              </Button>
-            </div>
-
-            <div className="text-muted-foreground text-sm">
-              <ul className="list-disc space-y-1 pl-5">
-                <li>When system proxy is set, all apps will use the proxy for network access</li>
-                <li>After use, restore the original proxy or clear the system proxy</li>
-                <li>Proxy port should match the agent listening port</li>
-              </ul>
             </div>
           </div>
         </CardContent>
+      </Card>
+
+      <Card className="py-4">
+        <CardHeader className="px-5">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Info className="size-4 text-muted-foreground" />
+            Notes
+          </CardTitle>
+          <CardDescription>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>When system proxy is set, all apps will use the proxy for network access</li>
+              <li>After use, restore the original proxy or clear the system proxy</li>
+              <li>Proxy port should match the agent listening port</li>
+            </ul>
+          </CardDescription>
+        </CardHeader>
       </Card>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, RefreshCcw, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
+import { ExternalLink, Info, RefreshCcw, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ export function CertificatesPanel() {
             <div className="flex min-w-0 items-center gap-2">
               <div className="min-w-0 flex-1 truncate font-mono text-sm">{certPath}</div>
               <Button
-                className="-ml-3 mr-auto text-muted-foreground"
+                className="-ml-3 mr-auto text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                 variant="link"
                 type="button"
                 onClick={openCertFolder}
@@ -64,7 +64,10 @@ export function CertificatesPanel() {
 
       <Card className="py-4">
         <CardHeader className="px-5">
-          <CardTitle className="text-base">Notes</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Info className="size-4 text-muted-foreground" />
+            Notes
+          </CardTitle>
           <CardDescription>
             To intercept HTTPS traffic, install a self-signed CA certificate into the system trust store. After
             installation, the agent can decrypt and inspect HTTPS requests.
