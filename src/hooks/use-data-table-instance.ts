@@ -57,6 +57,8 @@ export function useDataTableInstance<TData, TValue>({
       columnSizing,
     },
     enableRowSelection,
+    // Prevent render-phase auto-resets from scheduling state updates before mount.
+    autoResetPageIndex: false,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     getRowId: getRowId ?? ((row) => (row as { id: string | number }).id.toString()),
