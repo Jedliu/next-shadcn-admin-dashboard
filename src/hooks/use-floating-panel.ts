@@ -49,28 +49,51 @@ export function useFloatingPanel({
     if (!open) return;
 
     let raf = 0;
+    let observedAnchor: HTMLElement | null = null;
+    let ro: ResizeObserver | null = null;
+
+    const ensureObserver = (anchor: HTMLElement | null) => {
+      if (anchor === observedAnchor) return;
+      ro?.disconnect();
+      ro = null;
+      observedAnchor = anchor;
+      if (anchor) {
+        ro = new ResizeObserver(update);
+        ro.observe(anchor);
+      }
+    };
+
+    const updatePosition = (rect: DOMRect) => {
+      const next = {
+        top: Math.round(rect.top),
+        right: Math.max(0, Math.round(window.innerWidth - rect.right)),
+        bottom: Math.max(0, Math.round(window.innerHeight - rect.bottom)),
+      };
+      setPosition((prev) =>
+        prev && prev.top === next.top && prev.right === next.right && prev.bottom === next.bottom ? prev : next,
+      );
+    };
+
     const update = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         if (!isMountedRef.current) return;
         const anchor = document.querySelector<HTMLElement>(anchorSelector);
-        const rect = anchor?.getBoundingClientRect();
+        if (!anchor || !anchor.isConnected) {
+          ensureObserver(null);
+          setPosition(null);
+          return;
+        }
+        ensureObserver(anchor);
+        const rect = anchor.getBoundingClientRect();
         if (!rect) return;
-        setPosition({
-          top: Math.round(rect.top),
-          right: Math.max(0, Math.round(window.innerWidth - rect.right)),
-          bottom: Math.max(0, Math.round(window.innerHeight - rect.bottom)),
-        });
+        updatePosition(rect);
       });
     };
 
     update();
     window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
-
-    const anchor = document.querySelector<HTMLElement>(anchorSelector);
-    const ro = anchor ? new ResizeObserver(update) : null;
-    if (anchor && ro) ro.observe(anchor);
+    window.addEventListener("scroll", update, { capture: true, passive: true });
 
     return () => {
       cancelAnimationFrame(raf);
