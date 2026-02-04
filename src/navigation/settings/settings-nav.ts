@@ -1,4 +1,4 @@
-import { Bell, KeyRound, type LucideIcon, Monitor, Palette, Settings, User } from "lucide-react";
+import { Bell, FileText, KeyRound, type LucideIcon, Monitor, Palette, Settings, User } from "lucide-react";
 
 export type SettingsNavSubItem = {
   title: string;
@@ -16,6 +16,7 @@ export const settingsNavItem = {
     { title: "Account", url: "/dashboard/settings/account", icon: KeyRound },
     { title: "Appearance", url: "/dashboard/settings/appearance", icon: Palette },
     { title: "Notifications", url: "/dashboard/settings/notifications", icon: Bell },
+    { title: "Logs", url: "/dashboard/settings/logs", icon: FileText },
     { title: "Display", url: "/dashboard/settings/display", icon: Monitor },
   ],
 } satisfies {
