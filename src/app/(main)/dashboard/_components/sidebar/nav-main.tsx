@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { ChevronRight, GripVerticalIcon, MailIcon, Pin, PlusCircleIcon, XIcon } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -230,6 +230,7 @@ export function NavMain({ items }: NavMainProps) {
   const path = usePathname();
   const [hash, setHash] = React.useState("");
   const { state, isMobile } = useSidebar();
+  const router = useRouter();
   const {
     open: quickCreateOpen,
     pinned: quickCreatePinned,
@@ -238,6 +239,7 @@ export function NavMain({ items }: NavMainProps) {
     setPanelWidth,
     setOpen: setQuickCreateOpen,
     setPinned: setQuickCreatePinned,
+    openPanel,
     togglePanel,
   } = useQuickCreate();
   const [sidebarRight, setSidebarRight] = React.useState(0);
@@ -330,9 +332,12 @@ export function NavMain({ items }: NavMainProps) {
   React.useEffect(() => {
     if (isMobile || quickCreatePinned || !quickCreateOpen) return;
     updateSidebarRight();
-    requestAnimationFrame(updateSidebarRight);
+    const raf = requestAnimationFrame(updateSidebarRight);
     const timeout = window.setTimeout(updateSidebarRight, 120);
-    return () => window.clearTimeout(timeout);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timeout);
+    };
   }, [isMobile, quickCreateOpen, quickCreatePinned, updateSidebarRight]);
 
   const isItemActive = (url: string, subItems?: NavMainItem["subItems"]) => {
@@ -355,10 +360,27 @@ export function NavMain({ items }: NavMainProps) {
 
   const onSubItemAction = React.useCallback(
     (action: NavAction) => {
-      if (action === "quick-create") togglePanel("quick-create");
-      if (action === "history") togglePanel("history");
+      if (action === "quick-create") {
+        togglePanel("quick-create");
+        return;
+      }
+
+      if (action !== "history") return;
+
+      const allowsHistory = path.startsWith("/dashboard/workbench") || path.startsWith("/dashboard/plugins");
+      if (allowsHistory) {
+        openPanel("history");
+        return;
+      }
+
+      try {
+        window.sessionStorage.setItem("open-history-panel", "1");
+      } catch {
+        // ignore storage errors
+      }
+      router.push("/dashboard/workbench");
     },
-    [togglePanel],
+    [openPanel, path, router, togglePanel],
   );
 
   return (

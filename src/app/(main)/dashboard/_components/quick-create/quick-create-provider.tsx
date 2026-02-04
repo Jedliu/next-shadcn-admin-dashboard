@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { usePathname, useSearchParams } from "next/navigation";
+
 type QuickCreateContextValue = {
   open: boolean;
   pinned: boolean;
@@ -28,6 +30,8 @@ type QuickCreateContextValue = {
 const QuickCreateContext = React.createContext<QuickCreateContextValue | null>(null);
 
 export function QuickCreateProvider({ children }: { readonly children: React.ReactNode }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [panelState, setPanelState] = React.useState<{ open: boolean; panel: "quick-create" | "history" }>({
     open: false,
     panel: "quick-create",
@@ -76,6 +80,45 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
       open: !(prev.open && prev.panel === nextPanel),
     }));
   }, []);
+
+  React.useEffect(() => {
+    if (!pathname) return;
+    const allowsHistory = pathname.startsWith("/dashboard/workbench") || pathname.startsWith("/dashboard/plugins");
+    if (!allowsHistory) return;
+
+    const panelParam = searchParams?.get("panel");
+    let shouldOpen = panelParam === "history";
+
+    if (!shouldOpen) {
+      try {
+        shouldOpen = window.sessionStorage.getItem("open-history-panel") === "1";
+      } catch {
+        shouldOpen = false;
+      }
+    }
+
+    if (!shouldOpen) return;
+
+    setPanelState((prev) => ({ ...prev, open: true, panel: "history" }));
+
+    if (panelParam !== "history") {
+      try {
+        window.sessionStorage.removeItem("open-history-panel");
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }, [pathname, searchParams]);
+
+  React.useEffect(() => {
+    if (!pathname) return;
+    const allowsHistory = pathname.startsWith("/dashboard/workbench") || pathname.startsWith("/dashboard/plugins");
+    if (allowsHistory) return;
+    if (panel !== "history") return;
+
+    setPinned(false);
+    setPanelState((prev) => ({ ...prev, open: false, panel: "quick-create" }));
+  }, [pathname, panel]);
 
   const value = React.useMemo(
     () => ({

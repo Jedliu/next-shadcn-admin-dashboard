@@ -549,6 +549,7 @@ function FiltersPanelDrawer({
 }) {
   const isMobile = useIsMobile();
   const contentRef = React.useRef<HTMLDivElement | null>(null);
+  const isMountedRef = React.useRef(false);
   const isResizingRef = React.useRef(false);
   const resizeStartXRef = React.useRef(0);
   const resizeStartWidthRef = React.useRef(0);
@@ -561,6 +562,13 @@ function FiltersPanelDrawer({
   const [visible, setVisible] = React.useState(false);
   const unmountTimeoutRef = React.useRef<number | null>(null);
   const DESKTOP_FLOATING_ANIMATION_MS = 500; // Match the existing right panel animation.
+
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const clampWidth = React.useCallback((width: number) => {
     const min = 360; // 22.5rem
@@ -593,6 +601,7 @@ function FiltersPanelDrawer({
     const update = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
+        if (!isMountedRef.current) return;
         const anchor = document.querySelector<HTMLElement>('[data-slot="table-cell-viewer-anchor"]');
         const rect = anchor?.getBoundingClientRect();
         if (!rect) return;
@@ -636,7 +645,10 @@ function FiltersPanelDrawer({
 
     // Closing: animate out, then unmount after the transition.
     setVisible(false);
-    unmountTimeoutRef.current = window.setTimeout(() => setMounted(false), DESKTOP_FLOATING_ANIMATION_MS);
+    unmountTimeoutRef.current = window.setTimeout(() => {
+      if (!isMountedRef.current) return;
+      setMounted(false);
+    }, DESKTOP_FLOATING_ANIMATION_MS);
     return () => {
       if (unmountTimeoutRef.current) {
         window.clearTimeout(unmountTimeoutRef.current);
@@ -648,7 +660,10 @@ function FiltersPanelDrawer({
   React.useEffect(() => {
     if (isMobile) return;
     if (!mounted || !desktopPosition) return;
-    const raf = requestAnimationFrame(() => setVisible(true));
+    const raf = requestAnimationFrame(() => {
+      if (!isMountedRef.current) return;
+      setVisible(true);
+    });
     return () => cancelAnimationFrame(raf);
   }, [desktopPosition, isMobile, mounted]);
 
@@ -774,6 +789,12 @@ function FiltersPanelDrawer({
 }
 
 export function DataTable({ data: initialData }: { data: z.infer<typeof sectionSchema>[] }) {
+  const [hasMounted, setHasMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   const [data, setData] = React.useState<z.infer<typeof sectionSchema>[]>(() => {
     // IMPORTANT: Keep derived demo fields deterministic to avoid SSR hydration mismatches.
     // - Don't use Date.now()/Math.random()
@@ -1166,37 +1187,41 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             </TabsContent>
           ))}
         </Tabs>
-        <TableCellViewerDrawer />
-        <FiltersPanelDrawer
-          open={filtersPanelOpen}
-          onOpenChange={setFiltersPanelOpen}
-          panelWidth={filtersPanelWidth}
-          setPanelWidth={setFiltersPanelWidth}
-          totalActiveConditions={totalSelectedFilters}
-        >
-          <FiltersBuilder
-            groups={filterGroups}
-            totalActiveConditions={totalSelectedFilters}
-            onClearAll={() => {
-              setFilterGroups([createEmptyGroup()]);
-              setUrlQuery("");
-              setFiltersEnabled(false);
-            }}
-            onChange={(next) => {
-              setFilterGroups(next);
-              setFiltersEnabled(true);
-            }}
-            variant="panel"
-            showHeader={false}
-          />
-        </FiltersPanelDrawer>
-        <SelectionActionBar
-          count={selectedCount}
-          actions={[
-            { label: "Save as", icon: Copy },
-            { label: "Delete", icon: Trash2 },
-          ]}
-        />
+        {hasMounted && (
+          <>
+            <TableCellViewerDrawer />
+            <FiltersPanelDrawer
+              open={filtersPanelOpen}
+              onOpenChange={setFiltersPanelOpen}
+              panelWidth={filtersPanelWidth}
+              setPanelWidth={setFiltersPanelWidth}
+              totalActiveConditions={totalSelectedFilters}
+            >
+              <FiltersBuilder
+                groups={filterGroups}
+                totalActiveConditions={totalSelectedFilters}
+                onClearAll={() => {
+                  setFilterGroups([createEmptyGroup()]);
+                  setUrlQuery("");
+                  setFiltersEnabled(false);
+                }}
+                onChange={(next) => {
+                  setFilterGroups(next);
+                  setFiltersEnabled(true);
+                }}
+                variant="panel"
+                showHeader={false}
+              />
+            </FiltersPanelDrawer>
+            <SelectionActionBar
+              count={selectedCount}
+              actions={[
+                { label: "Save as", icon: Copy },
+                { label: "Delete", icon: Trash2 },
+              ]}
+            />
+          </>
+        )}
       </div>
     </TableCellViewerProvider>
   );
