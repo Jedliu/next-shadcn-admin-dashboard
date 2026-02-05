@@ -10,17 +10,19 @@ type QuickCreateContextValue = {
   panelWidth: number;
   panel: "quick-create" | "history";
   testInputValue: string;
-  historyTab: "all" | "manual" | "auto";
+  historyFilters: Array<"manual" | "auto" | "pinned">;
   historySearch: string;
-  historySelectedId: string | null;
+  historySelectedIds: string[];
+  historyPinnedIds: string[];
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setPinned: React.Dispatch<React.SetStateAction<boolean>>;
   setPanelWidth: React.Dispatch<React.SetStateAction<number>>;
   setPanel: React.Dispatch<React.SetStateAction<"quick-create" | "history">>;
   setTestInputValue: React.Dispatch<React.SetStateAction<string>>;
-  setHistoryTab: React.Dispatch<React.SetStateAction<"all" | "manual" | "auto">>;
+  setHistoryFilters: React.Dispatch<React.SetStateAction<Array<"manual" | "auto" | "pinned">>>;
   setHistorySearch: React.Dispatch<React.SetStateAction<string>>;
-  setHistorySelectedId: React.Dispatch<React.SetStateAction<string | null>>;
+  setHistorySelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
+  setHistoryPinnedIds: React.Dispatch<React.SetStateAction<string[]>>;
   toggleOpen: () => void;
   togglePinned: () => void;
   openPanel: (panel: "quick-create" | "history") => void;
@@ -40,9 +42,10 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
   const [pinned, setPinned] = React.useState(false);
   const [panelWidth, setPanelWidth] = React.useState(352); // 22rem
   const [testInputValue, setTestInputValue] = React.useState("");
-  const [historyTab, setHistoryTab] = React.useState<"all" | "manual" | "auto">("all");
+  const [historyFilters, setHistoryFilters] = React.useState<Array<"manual" | "auto" | "pinned">>([]);
   const [historySearch, setHistorySearch] = React.useState("");
-  const [historySelectedId, setHistorySelectedId] = React.useState<string | null>(null);
+  const [historySelectedIds, setHistorySelectedIds] = React.useState<string[]>([]);
+  const [historyPinnedIds, setHistoryPinnedIds] = React.useState<string[]>([]);
   const [pendingPanel, setPendingPanel] = React.useState<"quick-create" | "history" | null>(null);
 
   const open = panelState.open;
@@ -123,17 +126,19 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
       panelWidth,
       panel,
       testInputValue,
-      historyTab,
+      historyFilters,
       historySearch,
-      historySelectedId,
+      historySelectedIds,
+      historyPinnedIds,
       setOpen,
       setPinned,
       setPanelWidth,
       setPanel,
       setTestInputValue,
-      setHistoryTab,
+      setHistoryFilters,
       setHistorySearch,
-      setHistorySelectedId,
+      setHistorySelectedIds,
+      setHistoryPinnedIds,
       toggleOpen,
       togglePinned,
       openPanel,
@@ -146,9 +151,10 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
       panelWidth,
       panel,
       testInputValue,
-      historyTab,
+      historyFilters,
       historySearch,
-      historySelectedId,
+      historySelectedIds,
+      historyPinnedIds,
       setOpen,
       setPanel,
       toggleOpen,

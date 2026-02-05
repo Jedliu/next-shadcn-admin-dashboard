@@ -2,11 +2,12 @@
 
 import * as React from "react";
 
-import { Clock, Copy, Database, Hand, Pencil, Search, Trash2, Zap } from "lucide-react";
+import { Clock, Copy, Database, Hand, Pencil, Pin, Search, Trash2, Zap } from "lucide-react";
 
+import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 import { useQuickCreate } from "./quick-create-provider";
@@ -93,65 +94,86 @@ function kindIcon(kind: HistoryKind) {
 }
 
 export function HistoryPanel({ className }: { readonly className?: string }) {
-  const { historyTab, setHistoryTab, historySearch, setHistorySearch, historySelectedId, setHistorySelectedId } =
-    useQuickCreate();
+  const {
+    historyFilters,
+    setHistoryFilters,
+    historySearch,
+    setHistorySearch,
+    historySelectedIds,
+    setHistorySelectedIds,
+    historyPinnedIds,
+    setHistoryPinnedIds,
+  } = useQuickCreate();
 
   const [items] = React.useState<HistoryItem[]>(seedHistory);
-
+  const pinnedSet = React.useMemo(() => new Set(historyPinnedIds), [historyPinnedIds]);
   const counts = React.useMemo(() => {
     const manual = items.filter((i) => i.kind === "manual").length;
     const auto = items.filter((i) => i.kind === "auto").length;
-    return { all: items.length, manual, auto };
-  }, [items]);
+    const pinned = items.filter((i) => pinnedSet.has(i.id)).length;
+    return { manual, auto, pinned };
+  }, [items, pinnedSet]);
 
   const visibleItems = React.useMemo(() => {
     const q = historySearch.trim().toLowerCase();
     return items.filter((item) => {
-      if (historyTab !== "all" && item.kind !== historyTab) return false;
+      if (historyFilters.length > 0) {
+        const matchesPinned = historyFilters.includes("pinned") && pinnedSet.has(item.id);
+        const matchesKind =
+          (historyFilters.includes("auto") && item.kind === "auto") ||
+          (historyFilters.includes("manual") && item.kind === "manual");
+        if (!matchesPinned && !matchesKind) return false;
+      }
       if (!q) return true;
       return item.title.toLowerCase().includes(q) || item.timestamp.toLowerCase().includes(q);
     });
-  }, [items, historySearch, historyTab]);
+  }, [items, historyFilters, historySearch, pinnedSet]);
+
+  const togglePinned = React.useCallback(
+    (id: string) => {
+      setHistoryPinnedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+    },
+    [setHistoryPinnedIds],
+  );
+
+  const toggleSelected = React.useCallback(
+    (id: string) => {
+      setHistorySelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+    },
+    [setHistorySelectedIds],
+  );
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", className)}>
-      <div className="border-b bg-background/95">
-        <div className="relative">
-          <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 size-4 text-muted-foreground" />
-          <Input
-            value={historySearch}
-            onChange={(e) => setHistorySearch(e.target.value)}
-            placeholder="Search history..."
-            className="h-9 border-0 pl-9 shadow-none focus-visible:ring-0"
+      <div className="border-b bg-background/95 px-3 py-2">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 size-4 text-muted-foreground" />
+            <Input
+              value={historySearch}
+              onChange={(e) => setHistorySearch(e.target.value)}
+              placeholder="Search history..."
+              className="h-9 border-0 pl-9 shadow-none focus-visible:ring-0"
+            />
+          </div>
+          <DataTableFacetedFilter
+            title="Status"
+            options={[
+              { label: `Auto saved (${counts.auto})`, value: "auto", icon: Zap },
+              { label: `Manual saved (${counts.manual})`, value: "manual", icon: Hand },
+              { label: `Pinned (${counts.pinned})`, value: "pinned", icon: Pin },
+            ]}
+            values={historyFilters}
+            onChange={(values) => setHistoryFilters((values ?? []) as Array<"manual" | "auto" | "pinned">)}
           />
         </div>
-      </div>
-
-      <div className="border-b bg-muted/40 px-3 py-2">
-        <Tabs value={historyTab} onValueChange={(v) => setHistoryTab(v as typeof historyTab)} className="w-full">
-          <TabsList className="w-full justify-start gap-1 bg-transparent p-0">
-            <TabsTrigger value="all" className="flex-none rounded-md border border-transparent px-3 font-normal">
-              <span>All</span>
-              <span className="text-muted-foreground">({counts.all})</span>
-            </TabsTrigger>
-            <TabsTrigger value="manual" className="flex-none rounded-md border border-transparent px-3 font-normal">
-              <Hand className="size-4" />
-              <span>Manual</span>
-              <span className="text-muted-foreground">({counts.manual})</span>
-            </TabsTrigger>
-            <TabsTrigger value="auto" className="flex-none rounded-md border border-transparent px-3 font-normal">
-              <Zap className="size-4" />
-              <span>Auto</span>
-              <span className="text-muted-foreground">({counts.auto})</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {visibleItems.length ? (
           visibleItems.map((item) => {
-            const selected = historySelectedId === item.id;
+            const selected = historySelectedIds.includes(item.id);
+            const isPinned = pinnedSet.has(item.id);
             return (
               <div
                 key={item.id}
@@ -160,20 +182,33 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
                   selected && "bg-muted/40",
                 )}
               >
-                <button
-                  type="button"
-                  className="flex min-w-0 flex-1 items-start gap-3 text-left"
-                  onClick={() => setHistorySelectedId(item.id)}
-                >
+                <div className="flex min-w-0 flex-1 items-start gap-3 text-left">
                   <div className="mt-1 shrink-0">{kindIcon(item.kind)}</div>
                   <div className="min-w-0 flex-1">
-                    <div className="min-w-0 truncate font-normal">{item.title}</div>
+                    <button
+                      type="button"
+                      onClick={() => toggleSelected(item.id)}
+                      className="min-w-0 truncate text-left font-normal"
+                    >
+                      {item.title}
+                    </button>
                     <div className="mt-1 flex items-center gap-2 text-muted-foreground text-sm">
-                      <Clock className="size-4" />
-                      <span className="font-mono tabular-nums">{item.timestamp}</span>
+                      <Checkbox
+                        checked={selected}
+                        onCheckedChange={() => toggleSelected(item.id)}
+                        aria-label={`Select ${item.title}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleSelected(item.id)}
+                        className="flex items-center gap-2 text-muted-foreground"
+                      >
+                        <Clock className="size-4" />
+                        <span className="font-mono tabular-nums">{item.timestamp}</span>
+                      </button>
                     </div>
                   </div>
-                </button>
+                </div>
 
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <div className="flex items-center gap-1 text-muted-foreground">
@@ -181,6 +216,17 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
                     <span className="font-mono tabular-nums">{item.records}</span>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      title={isPinned ? "Unpin" : "Pin"}
+                      onClick={() => togglePinned(item.id)}
+                      className={isPinned ? "text-primary" : undefined}
+                    >
+                      <Pin className="size-4" />
+                      <span className="sr-only">{isPinned ? "Unpin" : "Pin"}</span>
+                    </Button>
                     <Button type="button" variant="ghost" size="icon-sm" title="Copy">
                       <Copy className="size-4" />
                       <span className="sr-only">Copy</span>
