@@ -31,6 +31,8 @@ type DataTableFacetedFilterProps = {
   values?: string[];
   onChange: (values?: string[]) => void;
   listClassName?: string;
+  showCountOnly?: boolean;
+  countLabelThreshold?: number;
 };
 
 export function DataTableFacetedFilter({
@@ -39,9 +41,12 @@ export function DataTableFacetedFilter({
   values,
   onChange,
   listClassName,
+  showCountOnly = false,
+  countLabelThreshold,
 }: DataTableFacetedFilterProps) {
   const selectedValues = new Set(values ?? []);
   const hasSelection = selectedValues.size > 0;
+  const threshold = countLabelThreshold ?? (showCountOnly ? 1 : 3);
 
   return (
     <Popover>
@@ -56,7 +61,7 @@ export function DataTableFacetedFilter({
                 {selectedValues.size}
               </Badge>
               <div className="hidden gap-1 lg:flex">
-                {selectedValues.size > 2 ? (
+                {selectedValues.size >= threshold ? (
                   <Badge variant="secondary" className="rounded-sm px-1 font-normal">
                     {selectedValues.size} selected
                   </Badge>

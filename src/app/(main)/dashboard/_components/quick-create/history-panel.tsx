@@ -157,7 +157,7 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
             />
           </div>
           <DataTableFacetedFilter
-            title="Status"
+            title="Type"
             options={[
               { label: `Auto saved (${counts.auto})`, value: "auto", icon: Zap },
               { label: `Manual saved (${counts.manual})`, value: "manual", icon: Hand },
@@ -165,6 +165,7 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
             ]}
             values={historyFilters}
             onChange={(values) => setHistoryFilters((values ?? []) as Array<"manual" | "auto" | "pinned">)}
+            countLabelThreshold={1}
           />
         </div>
       </div>
