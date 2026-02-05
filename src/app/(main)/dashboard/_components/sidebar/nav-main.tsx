@@ -36,7 +36,6 @@ import {
 } from "@/components/ui/sidebar";
 import { usePointerResize } from "@/hooks/use-pointer-resize";
 import { clampPanelWidth } from "@/lib/panel-utils";
-import { cn } from "@/lib/utils";
 import type { NavGroup, NavMainItem } from "@/navigation/sidebar/sidebar-items";
 
 interface NavMainProps {
@@ -411,8 +410,10 @@ export function NavMain({ items }: NavMainProps) {
         <Drawer open={quickCreateOpen} onOpenChange={setQuickCreateOpen} direction="bottom" modal noBodyStyles={false}>
           <DrawerContent>
             <DrawerHeader className="gap-1">
-              <DrawerTitle>{panel === "history" ? "History" : "Quick Create"}</DrawerTitle>
-              {panel === "history" ? null : (
+              <DrawerTitle>{panel === "history" ? "Taffic History" : "Quick Create"}</DrawerTitle>
+              {panel === "history" ? (
+                <DrawerDescription>Management for taffic history</DrawerDescription>
+              ) : (
                 <DrawerDescription>Create common items without leaving your current page.</DrawerDescription>
               )}
             </DrawerHeader>

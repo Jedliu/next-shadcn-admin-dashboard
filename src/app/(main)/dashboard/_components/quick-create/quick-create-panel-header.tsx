@@ -1,7 +1,5 @@
 "use client";
 
-import * as React from "react";
-
 import { Pin, PinOff, XIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -25,9 +23,11 @@ export function QuickCreatePanelHeader({ panel, onPin, onUnpin, onClose, classNa
     >
       <div className="min-w-0">
         <h2 className={cn("truncate", panel === "history" ? "font-medium text-sm" : "font-semibold")}>
-          {panel === "history" ? "History" : "Quick Create"}
+          {panel === "history" ? "Taffic History" : "Quick Create"}
         </h2>
-        {panel === "history" ? null : (
+        {panel === "history" ? (
+          <p className="text-muted-foreground text-xs">Management for taffic history</p>
+        ) : (
           <p className="text-muted-foreground text-sm">Create common items without leaving your current page.</p>
         )}
       </div>

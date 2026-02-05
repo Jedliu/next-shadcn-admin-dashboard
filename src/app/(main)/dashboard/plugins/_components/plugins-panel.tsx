@@ -12,6 +12,7 @@ import { DataTableColumnHeader } from "@/components/data-table/data-table-column
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import { SelectionActionBar } from "@/components/data-table/selection-action-bar";
+import { withDndColumn } from "@/components/data-table/table-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -148,6 +149,7 @@ export function PluginsPanel() {
   const [plugins, setPlugins] = React.useState<Plugin[]>(seedPlugins);
   const [query, setQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<"all" | PluginStatus>("all");
+  const rowDragEnabled = true;
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -187,7 +189,7 @@ export function PluginsPanel() {
     });
   }, []);
 
-  const columns = React.useMemo<ColumnDef<Plugin>[]>(
+  const baseColumns = React.useMemo<ColumnDef<Plugin>[]>(
     () => [
       {
         id: "select",
@@ -322,6 +324,7 @@ export function PluginsPanel() {
     ],
     [deletePlugin, togglePlugin],
   );
+  const columns = React.useMemo(() => (rowDragEnabled ? withDndColumn(baseColumns) : baseColumns), [baseColumns]);
 
   const table = useDataTableInstance({
     data: filteredPlugins,
@@ -330,6 +333,16 @@ export function PluginsPanel() {
     getRowId: (row) => row.id,
   });
   const selectedCount = table.getFilteredSelectedRowModel().rows.length;
+  const filteredIds = React.useMemo(() => new Set(filteredPlugins.map((plugin) => plugin.id)), [filteredPlugins]);
+
+  const handleReorder = React.useCallback(
+    (nextFiltered: Plugin[]) => {
+      if (!rowDragEnabled) return;
+      const nextQueue = [...nextFiltered];
+      setPlugins((prev) => prev.map((plugin) => (filteredIds.has(plugin.id) ? (nextQueue.shift() ?? plugin) : plugin)));
+    },
+    [filteredIds],
+  );
 
   const configurePlugin = React.useMemo(
     () => (configurePluginId ? (plugins.find((p) => p.id === configurePluginId) ?? null) : null),
@@ -490,7 +503,13 @@ export function PluginsPanel() {
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:bg-muted">
               <div className="relative z-10 min-h-0 flex-1 overflow-auto">
-                <DataTable table={table} columns={columns} className="w-auto [&_thead_tr]:border-transparent" />
+                <DataTable
+                  table={table}
+                  columns={columns}
+                  dndEnabled={rowDragEnabled}
+                  onReorder={handleReorder}
+                  className="w-auto [&_thead_tr]:border-transparent"
+                />
               </div>
             </div>
           </div>

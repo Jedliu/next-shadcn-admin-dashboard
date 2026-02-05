@@ -314,7 +314,7 @@ export function TableCellViewer({ item, label }: { item: ViewerItem; label?: Rea
   return (
     <Button
       variant="link"
-      className="w-full min-w-0 justify-start px-0 text-left text-foreground"
+      className="w-full min-w-0 justify-start px-0 text-left font-normal text-foreground"
       onClick={() => {
         setItem(item);
         setOpen(true);

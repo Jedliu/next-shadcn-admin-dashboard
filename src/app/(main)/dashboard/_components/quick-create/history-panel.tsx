@@ -115,14 +115,14 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", className)}>
-      <div className="border-b bg-background/95 p-3">
+      <div className="border-b bg-background/95">
         <div className="relative">
           <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 size-4 text-muted-foreground" />
           <Input
             value={historySearch}
             onChange={(e) => setHistorySearch(e.target.value)}
             placeholder="Search history..."
-            className="h-9 pl-9"
+            className="h-9 border-0 pl-9 shadow-none focus-visible:ring-0"
           />
         </div>
       </div>

@@ -1,24 +1,29 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 export default function Page() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Profile</CardTitle>
-        <CardDescription>Update your profile information.</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4">
+    <div className="flex flex-col gap-6">
+      <div className="space-y-1">
+        <h2 className="font-semibold text-base">Profile</h2>
+        <p className="text-muted-foreground text-sm">Update your profile information.</p>
+      </div>
+      <Separator />
+      <div className="grid gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="display-name">Display name</Label>
-          <Input id="display-name" placeholder="Studio Admin" />
+          <Label htmlFor="display-name" className="font-medium text-xs">
+            Display name
+          </Label>
+          <Input id="display-name" placeholder="Studio Admin" className="h-8 text-sm" />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="admin@example.com" />
+          <Label htmlFor="email" className="font-medium text-xs">
+            Email
+          </Label>
+          <Input id="email" type="email" placeholder="admin@example.com" className="h-8 text-sm" />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

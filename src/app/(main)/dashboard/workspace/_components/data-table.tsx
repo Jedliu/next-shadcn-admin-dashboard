@@ -677,6 +677,7 @@ function FiltersPanelDrawer({
 
 export function DataTable({ data: initialData }: { data: z.infer<typeof sectionSchema>[] }) {
   const [hasMounted, setHasMounted] = React.useState(false);
+  const rowDragEnabled = false;
 
   React.useEffect(() => {
     setHasMounted(true);
@@ -744,7 +745,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
       };
     });
   });
-  const columns = withDndColumn(dashboardColumns);
+  const columns = rowDragEnabled ? withDndColumn(dashboardColumns) : dashboardColumns;
   const table = useDataTableInstance({
     data,
     columns,
@@ -765,7 +766,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     getRowId: (row) => row.id.toString(),
   });
   const [tabs, setTabs] = React.useState([
-    { value: "outline", label: "Outline" },
+    { value: "outline", label: "Traffic" },
     { value: "past-performance", label: "Past Performance", badge: 3 },
     { value: "key-personnel", label: "Key Personnel", badge: 2 },
     { value: "focus-documents", label: "Focus Documents" },
@@ -875,14 +876,14 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:items-stretch"
           >
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-10 before:bg-muted">
+              <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-8 before:bg-muted">
                 <div className="relative z-10 min-h-0 flex-1 overflow-auto">
                   <DataTableNew
-                    dndEnabled
                     table={table}
                     columns={columns}
-                    onReorder={setData}
-                    className="w-auto [&_thead_tr]:border-transparent"
+                    dndEnabled={rowDragEnabled}
+                    onReorder={rowDragEnabled ? setData : undefined}
+                    className="w-auto [&_[data-slot=table-cell]]:py-1 [&_[data-slot=table-head]]:h-8 [&_thead_tr]:border-transparent"
                   />
                 </div>
               </div>
@@ -983,7 +984,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                         if (!hasAnyFilters) return;
                         setFiltersEnabled((prev) => !prev);
                       }}
-                      className="rounded-full transition-all duration-100 ease-linear data-[state=unchecked]:-ml-6 data-[state=unchecked]:-translate-x-1 data-[state=checked]:ml-0 data-[state=checked]:translate-x-0 [html[data-theme-preset=brutalist]_&]:shadow-none [html[data-theme-preset=brutalist]_&]:data-[state=checked]:shadow-xs [html[data-theme-preset=brutalist]_&]:data-[state=unchecked]:opacity-0"
+                      className="data-[state=unchecked]:-ml-6 data-[state=unchecked]:-translate-x-1 rounded-full transition-all duration-100 ease-linear data-[state=checked]:ml-0 data-[state=checked]:translate-x-0 [html[data-theme-preset=brutalist]_&]:shadow-none [html[data-theme-preset=brutalist]_&]:data-[state=unchecked]:opacity-0 [html[data-theme-preset=brutalist]_&]:data-[state=checked]:shadow-xs"
                     />
                     <FieldTitle>{showFiltered ? "Filtered" : "All"}</FieldTitle>
                   </Field>

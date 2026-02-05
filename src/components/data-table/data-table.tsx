@@ -77,7 +77,9 @@ export function DataTable<TData, TValue>({
   onReorder,
   className,
 }: DataTableProps<TData, TValue>) {
-  const dataIds: UniqueIdentifier[] = table.getRowModel().rows.map((row) => Number(row.id) as UniqueIdentifier);
+  const dataIds: UniqueIdentifier[] = table
+    .getRowModel()
+    .rows.map((row) => (row.original as { id: UniqueIdentifier }).id);
   const sortableId = React.useId();
   const sensors = useSensors(useSensor(MouseSensor, {}), useSensor(TouchSensor, {}), useSensor(KeyboardSensor, {}));
 
@@ -95,7 +97,7 @@ export function DataTable<TData, TValue>({
 
   const tableContent = (
     <table
-      className={cn("w-full caption-bottom text-sm table-fixed", className)}
+      className={cn("w-full table-fixed caption-bottom text-sm", className)}
       style={{ width: table.getTotalSize() }}
     >
       <TableHeader className="sticky top-0 z-10 border-b bg-muted">

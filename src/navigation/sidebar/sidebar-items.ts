@@ -44,7 +44,7 @@ export const sidebarItems: NavGroup[] = [
         icon: LayoutDashboard,
       },
       {
-        title: "History",
+        title: "Traffic History",
         url: "/dashboard/workspace/history",
         icon: History,
         action: "history",
