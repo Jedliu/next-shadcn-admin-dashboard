@@ -150,6 +150,7 @@ export function PluginsPanel() {
   const [query, setQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<"all" | PluginStatus>("all");
   const rowDragEnabled = true;
+  const rowDensity = "normal" as const;
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -508,6 +509,7 @@ export function PluginsPanel() {
                   columns={columns}
                   dndEnabled={rowDragEnabled}
                   onReorder={handleReorder}
+                  density={rowDensity}
                   className="w-auto [&_thead_tr]:border-transparent"
                 />
               </div>

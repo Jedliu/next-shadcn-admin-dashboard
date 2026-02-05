@@ -678,6 +678,7 @@ function FiltersPanelDrawer({
 export function DataTable({ data: initialData }: { data: z.infer<typeof sectionSchema>[] }) {
   const [hasMounted, setHasMounted] = React.useState(false);
   const rowDragEnabled = false;
+  const rowDensity = "compact" as const;
 
   React.useEffect(() => {
     setHasMounted(true);
@@ -876,14 +877,15 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:items-stretch"
           >
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border before:absolute before:top-0 before:right-0 before:left-0 before:z-0 before:box-content before:h-8 before:bg-muted">
+              <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border">
                 <div className="relative z-10 min-h-0 flex-1 overflow-auto">
                   <DataTableNew
                     table={table}
                     columns={columns}
                     dndEnabled={rowDragEnabled}
                     onReorder={rowDragEnabled ? setData : undefined}
-                    className="w-auto [&_[data-slot=table-cell]]:py-1 [&_[data-slot=table-head]]:h-8 [&_thead_tr]:border-transparent"
+                    density={rowDensity}
+                    className="w-auto [&_thead_tr]:border-transparent"
                   />
                 </div>
               </div>

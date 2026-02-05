@@ -27,6 +27,7 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   dndEnabled?: boolean;
   onReorder?: (newData: TData[]) => void;
+  density?: "compact" | "normal" | "comfortable";
   className?: string;
 }
 
@@ -75,8 +76,16 @@ export function DataTable<TData, TValue>({
   columns,
   dndEnabled = false,
   onReorder,
+  density = "normal",
   className,
 }: DataTableProps<TData, TValue>) {
+  const densityClass =
+    density === "compact"
+      ? "[&_[data-slot=table-cell]]:py-1 [&_[data-slot=table-head]]:h-8"
+      : density === "comfortable"
+        ? "[&_[data-slot=table-cell]]:py-3 [&_[data-slot=table-head]]:h-12"
+        : "[&_[data-slot=table-cell]]:py-2 [&_[data-slot=table-head]]:h-10";
+  const headerBandClass = density === "compact" ? "h-8" : density === "comfortable" ? "h-12" : "h-10";
   const dataIds: UniqueIdentifier[] = table
     .getRowModel()
     .rows.map((row) => (row.original as { id: UniqueIdentifier }).id);
@@ -96,71 +105,77 @@ export function DataTable<TData, TValue>({
   }
 
   const tableContent = (
-    <table
-      className={cn("w-full table-fixed caption-bottom text-sm", className)}
-      style={{ width: table.getTotalSize() }}
-    >
-      <TableHeader className="sticky top-0 z-10 border-b bg-muted">
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
-            {headerGroup.headers.map((header) => {
-              const canSort = header.column.getCanSort() && !header.isPlaceholder;
-              const handleSort = () => {
-                if (!canSort) return;
+    <div className="relative w-full">
+      <div
+        aria-hidden="true"
+        className={cn("pointer-events-none absolute inset-x-0 top-0 z-0 bg-muted", headerBandClass)}
+      />
+      <table
+        className={cn("relative z-10 w-full table-fixed caption-bottom text-sm", densityClass, className)}
+        style={{ width: table.getTotalSize() }}
+      >
+        <TableHeader className="sticky top-0 z-10 border-b bg-muted">
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                const canSort = header.column.getCanSort() && !header.isPlaceholder;
+                const handleSort = () => {
+                  if (!canSort) return;
 
-                const currentSort = header.column.getIsSorted();
-                if (currentSort === false) {
-                  // Unsorted -> asc
-                  header.column.toggleSorting(false);
-                } else if (currentSort === "asc") {
-                  // asc -> desc
-                  header.column.toggleSorting(true);
-                } else {
-                  // desc -> unsorted
-                  header.column.clearSorting();
-                }
-              };
+                  const currentSort = header.column.getIsSorted();
+                  if (currentSort === false) {
+                    // Unsorted -> asc
+                    header.column.toggleSorting(false);
+                  } else if (currentSort === "asc") {
+                    // asc -> desc
+                    header.column.toggleSorting(true);
+                  } else {
+                    // desc -> unsorted
+                    header.column.clearSorting();
+                  }
+                };
 
-              return (
-                <TableHead
-                  key={header.id}
-                  colSpan={header.colSpan}
-                  className={cn("group", canSort && "cursor-pointer select-none")}
-                  onClick={canSort ? handleSort : undefined}
-                  style={{
-                    width: header.getSize(),
-                    position: "relative",
-                  }}
-                >
-                  {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                  {header.column.getCanResize() && (
-                    <div
-                      onMouseDown={(event) => {
-                        event.stopPropagation();
-                        header.getResizeHandler()(event);
-                      }}
-                      onTouchStart={(event) => {
-                        event.stopPropagation();
-                        header.getResizeHandler()(event);
-                      }}
-                      onClick={(event) => event.stopPropagation()}
-                      className="hover:!w-1 hover:!bg-primary absolute top-0 right-0 z-20 h-full w-px cursor-col-resize touch-none select-none bg-border opacity-0 group-hover:opacity-100"
-                      style={{
-                        transform: header.column.getIsResizing() ? "translateX(0)" : "",
-                      }}
-                      aria-hidden="true"
-                    />
-                  )}
-                </TableHead>
-              );
-            })}
-          </TableRow>
-        ))}
-      </TableHeader>
-      <TableBody className="**:data-[slot=table-cell]:first:w-8">
-        {renderTableBody({ table, columns, dndEnabled, dataIds })}
-      </TableBody>
-    </table>
+                return (
+                  <TableHead
+                    key={header.id}
+                    colSpan={header.colSpan}
+                    className={cn("group", canSort && "cursor-pointer select-none")}
+                    onClick={canSort ? handleSort : undefined}
+                    style={{
+                      width: header.getSize(),
+                      position: "relative",
+                    }}
+                  >
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.column.getCanResize() && (
+                      <div
+                        onMouseDown={(event) => {
+                          event.stopPropagation();
+                          header.getResizeHandler()(event);
+                        }}
+                        onTouchStart={(event) => {
+                          event.stopPropagation();
+                          header.getResizeHandler()(event);
+                        }}
+                        onClick={(event) => event.stopPropagation()}
+                        className="hover:!w-1 hover:!bg-primary absolute top-0 right-0 z-20 h-full w-px cursor-col-resize touch-none select-none bg-border opacity-0 group-hover:opacity-100"
+                        style={{
+                          transform: header.column.getIsResizing() ? "translateX(0)" : "",
+                        }}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody className="**:data-[slot=table-cell]:first:w-8">
+          {renderTableBody({ table, columns, dndEnabled, dataIds })}
+        </TableBody>
+      </table>
+    </div>
   );
 
   if (dndEnabled) {
