@@ -18,7 +18,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Column, Table as TanStackTable } from "@tanstack/react-table";
-import { ChevronDown, Columns2, GripVertical, ListRestart, SlidersHorizontal } from "lucide-react";
+import { ArrowDownUp, ArrowLeftRight, ChevronDown, Columns2, GripVertical, ListRestart } from "lucide-react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
 import { Button } from "@/components/ui/button";
@@ -119,6 +119,41 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
     table.resetColumnVisibility();
     table.resetColumnSizing();
     table.resetColumnOrder();
+  };
+
+  const handleFitColumns = () => {
+    const rows = table.getRowModel().rows;
+    const sampleRows = rows.slice(0, 50);
+    const nextSizing: Record<string, number> = {};
+    const charWidth = 7.6; // approximate width for text-sm font
+    const cellPadding = 24; // table cell horizontal padding + icon spacing
+
+    for (const column of table.getAllLeafColumns()) {
+      if (!column.getIsVisible() || !column.getCanResize()) continue;
+      const headerLabel = getColumnLabel(column);
+      let maxLen = typeof headerLabel === "string" ? headerLabel.length : 0;
+
+      for (const row of sampleRows) {
+        const value = row.getValue(column.id);
+        if (value === null || value === undefined) continue;
+        const text = typeof value === "string" ? value : String(value);
+        maxLen = Math.max(maxLen, text.length);
+      }
+
+      const minSize = column.columnDef.minSize ?? 40;
+      const maxSize = column.columnDef.maxSize ?? 800;
+      const fallback = column.columnDef.size ?? column.getSize() ?? minSize;
+
+      if (maxLen === 0) {
+        nextSizing[column.id] = Math.max(minSize, Math.min(maxSize, fallback));
+        continue;
+      }
+
+      const estimated = Math.ceil(maxLen * charWidth + cellPadding);
+      nextSizing[column.id] = Math.max(minSize, Math.min(maxSize, estimated));
+    }
+
+    table.setColumnSizing(nextSizing);
   };
 
   const applyColumnOrder = React.useCallback(
@@ -244,6 +279,14 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={() => {
+            handleFitColumns();
+          }}
+        >
+          <ArrowLeftRight className="size-4 text-muted-foreground" />
+          Fit to content
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
             handleResetColumns();
           }}
         >
@@ -252,7 +295,7 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
         </DropdownMenuItem>
         <DropdownMenuSub open={orderMenuOpen} onOpenChange={setOrderMenuOpen}>
           <DropdownMenuSubTrigger disabled={!canOrderColumns}>
-            <SlidersHorizontal className="size-4 text-muted-foreground" />
+            <ArrowDownUp className="size-4 text-muted-foreground" />
             Order columns
           </DropdownMenuSubTrigger>
           <DropdownMenuPrimitive.SubContent
