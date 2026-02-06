@@ -15,12 +15,19 @@ import {
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { type ColumnDef, flexRender, type Table as TanStackTable } from "@tanstack/react-table";
+import { type ColumnDef, flexRender, type Row, type Table as TanStackTable } from "@tanstack/react-table";
 
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 import { DraggableRow } from "./draggable-row";
+
+type DataTableRowContextMenu<TData> = (props: {
+  row: Row<TData>;
+  table: TanStackTable<TData>;
+  selectedRows: Row<TData>[];
+}) => React.ReactNode;
 
 interface DataTableProps<TData, TValue> {
   table: TanStackTable<TData>;
@@ -29,46 +36,7 @@ interface DataTableProps<TData, TValue> {
   onReorder?: (newData: TData[]) => void;
   density?: "compact" | "normal" | "comfortable";
   className?: string;
-}
-
-function renderTableBody<TData, TValue>({
-  table,
-  columns,
-  dndEnabled,
-  dataIds,
-}: {
-  table: TanStackTable<TData>;
-  columns: ColumnDef<TData, TValue>[];
-  dndEnabled: boolean;
-  dataIds: UniqueIdentifier[];
-}) {
-  if (!table.getRowModel().rows.length) {
-    return (
-      <TableRow>
-        <TableCell colSpan={columns.length} className="h-24 text-center">
-          No results.
-        </TableCell>
-      </TableRow>
-    );
-  }
-  if (dndEnabled) {
-    return (
-      <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
-        {table.getRowModel().rows.map((row) => (
-          <DraggableRow key={row.id} row={row} />
-        ))}
-      </SortableContext>
-    );
-  }
-  return table.getRowModel().rows.map((row) => (
-    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
-  ));
+  rowContextMenu?: DataTableRowContextMenu<TData>;
 }
 
 export function DataTable<TData, TValue>({
@@ -78,6 +46,7 @@ export function DataTable<TData, TValue>({
   onReorder,
   density = "normal",
   className,
+  rowContextMenu,
 }: DataTableProps<TData, TValue>) {
   const densityClass =
     density === "compact"
@@ -91,6 +60,40 @@ export function DataTable<TData, TValue>({
     .rows.map((row) => (row.original as { id: UniqueIdentifier }).id);
   const sortableId = React.useId();
   const sensors = useSensors(useSensor(MouseSensor, {}), useSensor(TouchSensor, {}), useSensor(KeyboardSensor, {}));
+  const lastSelectedIdRef = React.useRef<string | null>(null);
+  const dragSelectingRef = React.useRef(false);
+  const dragAnchorIdRef = React.useRef<string | null>(null);
+  const dragCurrentIdRef = React.useRef<string | null>(null);
+
+  const stopDragSelection = React.useCallback(() => {
+    dragSelectingRef.current = false;
+    dragAnchorIdRef.current = null;
+    dragCurrentIdRef.current = null;
+  }, []);
+
+  React.useEffect(() => {
+    const handlePointerUp = () => stopDragSelection();
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+  }, [stopDragSelection]);
+
+  const isEventFromInteractiveElement = React.useCallback((target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    return Boolean(
+      target.closest(
+        "button,a,input,textarea,select,option,[role='button'],[role='checkbox'],[role='menuitem'],[data-row-select-ignore]",
+      ),
+    );
+  }, []);
+
+  const isEventFromTextInput = React.useCallback((target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    return Boolean(target.closest("input,textarea,[contenteditable='true']"));
+  }, []);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -103,6 +106,144 @@ export function DataTable<TData, TValue>({
       onReorder(newData);
     }
   }
+
+  const selectRange = React.useCallback(
+    (anchorId: string, targetId: string) => {
+      const rows = table.getRowModel().rows;
+      const anchorIndex = rows.findIndex((row) => row.id === anchorId);
+      const targetIndex = rows.findIndex((row) => row.id === targetId);
+      if (anchorIndex === -1 || targetIndex === -1) {
+        table.setRowSelection({ [targetId]: true });
+        return;
+      }
+      const [start, end] = anchorIndex < targetIndex ? [anchorIndex, targetIndex] : [targetIndex, anchorIndex];
+      const nextSelection: Record<string, boolean> = {};
+      for (let i = start; i <= end; i += 1) {
+        const row = rows[i];
+        if (row?.getCanSelect()) nextSelection[row.id] = true;
+      }
+      table.setRowSelection(nextSelection);
+    },
+    [table],
+  );
+
+  const handleRowPointerDown = React.useCallback(
+    (event: React.PointerEvent<HTMLTableRowElement>, row: Row<TData>) => {
+      if (event.button !== 0) return;
+      if (!row.getCanSelect()) return;
+      if (isEventFromInteractiveElement(event.target)) {
+        if (event.target instanceof HTMLElement && event.target.closest("[role='checkbox'],input[type='checkbox']")) {
+          lastSelectedIdRef.current = row.id;
+        }
+        return;
+      }
+
+      const rowId = row.id;
+      if (event.shiftKey) {
+        const anchorId = lastSelectedIdRef.current ?? rowId;
+        selectRange(anchorId, rowId);
+        lastSelectedIdRef.current = rowId;
+        stopDragSelection();
+        event.preventDefault();
+        return;
+      }
+
+      if (event.metaKey || event.ctrlKey) {
+        table.setRowSelection((prev) => {
+          const next = { ...prev };
+          if (row.getIsSelected()) {
+            delete next[rowId];
+          } else {
+            next[rowId] = true;
+          }
+          return next;
+        });
+        lastSelectedIdRef.current = rowId;
+        stopDragSelection();
+        event.preventDefault();
+        return;
+      }
+
+      table.setRowSelection({ [rowId]: true });
+      lastSelectedIdRef.current = rowId;
+      dragSelectingRef.current = true;
+      dragAnchorIdRef.current = rowId;
+      dragCurrentIdRef.current = rowId;
+      event.preventDefault();
+    },
+    [isEventFromInteractiveElement, selectRange, stopDragSelection, table],
+  );
+
+  const handleRowPointerEnter = React.useCallback(
+    (event: React.PointerEvent<HTMLTableRowElement>, row: Row<TData>) => {
+      if (!dragSelectingRef.current) return;
+      if (!row.getCanSelect()) return;
+      if (isEventFromInteractiveElement(event.target)) return;
+
+      const anchorId = dragAnchorIdRef.current;
+      if (!anchorId) return;
+      if (dragCurrentIdRef.current === row.id) return;
+      dragCurrentIdRef.current = row.id;
+      selectRange(anchorId, row.id);
+    },
+    [isEventFromInteractiveElement, selectRange],
+  );
+
+  const handleRowContextMenu = React.useCallback(
+    (event: React.MouseEvent<HTMLTableRowElement>, row: Row<TData>) => {
+      if (!rowContextMenu) return;
+      if (!row.getCanSelect()) return;
+      if (isEventFromTextInput(event.target)) return;
+      stopDragSelection();
+      if (!row.getIsSelected()) {
+        table.setRowSelection({ [row.id]: true });
+      }
+      lastSelectedIdRef.current = row.id;
+    },
+    [isEventFromTextInput, rowContextMenu, stopDragSelection, table],
+  );
+
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const rows = table.getRowModel().rows;
+
+  const renderRow = (row: Row<TData>) => {
+    const rowProps = {
+      onPointerDown: (event: React.PointerEvent<HTMLTableRowElement>) => handleRowPointerDown(event, row),
+      onPointerEnter: (event: React.PointerEvent<HTMLTableRowElement>) => handleRowPointerEnter(event, row),
+      onContextMenu: rowContextMenu
+        ? (event: React.MouseEvent<HTMLTableRowElement>) => handleRowContextMenu(event, row)
+        : undefined,
+      className: cn(row.getCanSelect() && "cursor-pointer"),
+    };
+
+    const rowElement = dndEnabled ? (
+      <DraggableRow row={row} {...rowProps} />
+    ) : (
+      <TableRow data-state={row.getIsSelected() && "selected"} {...rowProps}>
+        {row.getVisibleCells().map((cell) => (
+          <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </TableCell>
+        ))}
+      </TableRow>
+    );
+
+    if (!rowContextMenu) {
+      return <React.Fragment key={row.id}>{rowElement}</React.Fragment>;
+    }
+
+    const menu = rowContextMenu({ row, table, selectedRows });
+    if (!menu) {
+      return <React.Fragment key={row.id}>{rowElement}</React.Fragment>;
+    }
+
+    return (
+      <ContextMenu key={row.id}>
+        <ContextMenuTrigger asChild>{rowElement}</ContextMenuTrigger>
+        <ContextMenuContent>{menu}</ContextMenuContent>
+      </ContextMenu>
+    );
+  };
 
   const tableContent = (
     <div className="relative w-full">
@@ -172,7 +313,19 @@ export function DataTable<TData, TValue>({
           ))}
         </TableHeader>
         <TableBody className="**:data-[slot=table-cell]:first:w-8">
-          {renderTableBody({ table, columns, dndEnabled, dataIds })}
+          {!rows.length ? (
+            <TableRow>
+              <TableCell colSpan={columns.length} className="h-24 text-center">
+                No results.
+              </TableCell>
+            </TableRow>
+          ) : dndEnabled ? (
+            <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
+              {rows.map((row) => renderRow(row))}
+            </SortableContext>
+          ) : (
+            rows.map((row) => renderRow(row))
+          )}
         </TableBody>
       </table>
     </div>

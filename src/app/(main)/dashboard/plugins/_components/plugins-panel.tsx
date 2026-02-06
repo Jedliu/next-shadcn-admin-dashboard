@@ -3,7 +3,7 @@
 
 import * as React from "react";
 
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, Row, Table } from "@tanstack/react-table";
 import { CircleCheck, CircleMinus, EllipsisVertical, Plus, Power, Settings2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu";
 import {
   Dialog,
   DialogContent,
@@ -376,21 +377,86 @@ export function PluginsPanel() {
     toast.success(`Created plugin: ${name}`);
   };
 
-  const handleDisableSelected = () => {
+  const handleDisableSelected = React.useCallback(() => {
     const selectedIds = table.getFilteredSelectedRowModel().rows.map((row) => row.original.id);
     if (selectedIds.length === 0) return;
     setPlugins((prev) =>
       prev.map((plugin) => (selectedIds.includes(plugin.id) ? { ...plugin, status: "disabled" } : plugin)),
     );
     table.resetRowSelection();
-  };
+  }, [table]);
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = React.useCallback(() => {
     const selectedIds = table.getFilteredSelectedRowModel().rows.map((row) => row.original.id);
     if (selectedIds.length === 0) return;
     setPlugins((prev) => prev.filter((plugin) => !selectedIds.includes(plugin.id)));
     table.resetRowSelection();
-  };
+  }, [table]);
+
+  const rowContextMenu = React.useCallback(
+    ({ row, selectedRows }: { row: Row<Plugin>; table: Table<Plugin>; selectedRows: Row<Plugin>[] }) => {
+      const status = row.original.status;
+      const selectionCount = selectedRows.length;
+      return (
+        <>
+          <ContextMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              setConfigurePluginId(row.original.id);
+            }}
+          >
+            <Settings2 className="size-4 text-muted-foreground" />
+            Configure
+          </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              togglePlugin(row.original.id);
+            }}
+          >
+            <Power className="size-4 text-muted-foreground" />
+            {status === "enabled" ? "Disable" : "Enable"}
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            variant="destructive"
+            onSelect={(event) => {
+              event.preventDefault();
+              deletePlugin(row.original.id);
+            }}
+          >
+            <Trash2 className="size-4" />
+            Delete
+          </ContextMenuItem>
+          {selectionCount > 1 ? (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                onSelect={(event) => {
+                  event.preventDefault();
+                  handleDisableSelected();
+                }}
+              >
+                <Power className="size-4 text-muted-foreground" />
+                Disable selected ({selectionCount})
+              </ContextMenuItem>
+              <ContextMenuItem
+                variant="destructive"
+                onSelect={(event) => {
+                  event.preventDefault();
+                  handleDeleteSelected();
+                }}
+              >
+                <Trash2 className="size-4" />
+                Delete selected ({selectionCount})
+              </ContextMenuItem>
+            </>
+          ) : null}
+        </>
+      );
+    },
+    [deletePlugin, handleDeleteSelected, handleDisableSelected, togglePlugin],
+  );
 
   React.useEffect(() => {
     if (createUnmountTimeoutRef.current) {
@@ -510,6 +576,7 @@ export function PluginsPanel() {
                   dndEnabled={rowDragEnabled}
                   onReorder={handleReorder}
                   density={rowDensity}
+                  rowContextMenu={rowContextMenu}
                   className="w-auto [&_thead_tr]:border-transparent"
                 />
               </div>

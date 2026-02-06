@@ -3,7 +3,8 @@
 
 import * as React from "react";
 
-import { Copy, GripVerticalIcon, ListFilterPlus, Plus, Search, Trash2, XIcon } from "lucide-react";
+import type { Row, Table } from "@tanstack/react-table";
+import { Copy, ExternalLink, GripVerticalIcon, ListFilterPlus, Plus, Search, Trash2, XIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { z } from "zod";
 
@@ -12,6 +13,7 @@ import { SelectionActionBar } from "@/components/data-table/selection-action-bar
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Field, FieldLabel, FieldTitle } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -819,6 +821,72 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
   const showFiltered = hasAnyFilters && filtersEnabled;
   const selectedCount = table.getFilteredSelectedRowModel().rows.length;
 
+  const writeToClipboard = React.useCallback((value: string) => {
+    if (!value) return;
+    void navigator.clipboard?.writeText(value);
+  }, []);
+
+  const rowContextMenu = React.useCallback(
+    ({
+      row,
+      table: tableInstance,
+      selectedRows,
+    }: {
+      row: Row<z.infer<typeof sectionSchema>>;
+      table: Table<z.infer<typeof sectionSchema>>;
+      selectedRows: Row<z.infer<typeof sectionSchema>>[];
+    }) => {
+      const url = row.original.url ?? row.original.target ?? "";
+      const selectionCount = selectedRows.length;
+      return (
+        <>
+          <ContextMenuItem
+            disabled={!url}
+            onSelect={(event) => {
+              event.preventDefault();
+              if (!url) return;
+              window.open(url, "_blank", "noopener,noreferrer");
+            }}
+          >
+            <ExternalLink className="size-4 text-muted-foreground" />
+            Open URL
+          </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              writeToClipboard(String(row.original.id));
+            }}
+          >
+            <Copy className="size-4 text-muted-foreground" />
+            Copy ID
+          </ContextMenuItem>
+          <ContextMenuItem
+            disabled={!url}
+            onSelect={(event) => {
+              event.preventDefault();
+              if (!url) return;
+              writeToClipboard(url);
+            }}
+          >
+            <Copy className="size-4 text-muted-foreground" />
+            Copy URL
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            disabled={selectionCount === 0}
+            onSelect={(_event) => {
+              tableInstance.resetRowSelection();
+            }}
+          >
+            <XIcon className="size-4 text-muted-foreground" />
+            Clear selection
+          </ContextMenuItem>
+        </>
+      );
+    },
+    [writeToClipboard],
+  );
+
   const appliedColumnFilters = React.useMemo(() => {
     if (!filtersEnabled) return [];
 
@@ -885,6 +953,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                     dndEnabled={rowDragEnabled}
                     onReorder={rowDragEnabled ? setData : undefined}
                     density={rowDensity}
+                    rowContextMenu={rowContextMenu}
                     className="w-auto [&_thead_tr]:border-transparent"
                   />
                 </div>
