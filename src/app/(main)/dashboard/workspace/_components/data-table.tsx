@@ -58,7 +58,30 @@ type WorkspaceTableProps = {
 };
 
 function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, rowContextMenu }: WorkspaceTableProps) {
-  const { setItem, setOpen } = useTableCellViewer();
+  const { open, setItem, setOpen } = useTableCellViewer();
+  const tableRef = React.useRef<HTMLDivElement | null>(null);
+  const currentRowIdRef = React.useRef<string | null>(null);
+
+  const isInteractiveTarget = React.useCallback((target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    return Boolean(
+      target.closest(
+        "button,a,input,textarea,select,option,[role='button'],[role='checkbox'],[role='menuitem'],[data-row-select-ignore]",
+      ),
+    );
+  }, []);
+
+  React.useEffect(() => {
+    const rows = table.getRowModel().rows;
+    const selectedRows = rows.filter((row) => row.getIsSelected());
+    if (selectedRows.length === 0) return;
+    if (selectedRows.length === 1) {
+      currentRowIdRef.current = selectedRows[0]?.id ?? null;
+      return;
+    }
+    if (currentRowIdRef.current && selectedRows.some((row) => row.id === currentRowIdRef.current)) return;
+    currentRowIdRef.current = selectedRows[0]?.id ?? null;
+  }, [table]);
 
   const handleRowDoubleClick = React.useCallback(
     (
@@ -72,17 +95,69 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
     [setItem, setOpen],
   );
 
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.defaultPrevented) return;
+      if (isInteractiveTarget(event.target)) return;
+
+      const rows = table.getRowModel().rows;
+      if (rows.length === 0) return;
+
+      const selectedId = currentRowIdRef.current;
+      const selectedIndex = selectedId ? rows.findIndex((row) => row.id === selectedId) : -1;
+      const fallbackIndex = selectedIndex >= 0 ? selectedIndex : rows.findIndex((row) => row.getIsSelected());
+
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const direction = event.key === "ArrowDown" ? 1 : -1;
+        const startIndex = fallbackIndex >= 0 ? fallbackIndex : 0;
+        const nextIndex = Math.min(Math.max(startIndex + direction, 0), rows.length - 1);
+        const nextRow = rows[nextIndex];
+        if (!nextRow) return;
+        table.setRowSelection({ [nextRow.id]: true });
+        currentRowIdRef.current = nextRow.id;
+        if (open) {
+          setItem(nextRow.original);
+        }
+        return;
+      }
+
+      if (event.key === " " || event.key === "Spacebar") {
+        event.preventDefault();
+        const targetIndex = fallbackIndex >= 0 ? fallbackIndex : 0;
+        const targetRow = rows[targetIndex];
+        if (!targetRow) return;
+        currentRowIdRef.current = targetRow.id;
+        table.setRowSelection({ [targetRow.id]: true });
+        setItem(targetRow.original);
+        setOpen(true);
+      }
+    },
+    [isInteractiveTarget, open, setItem, setOpen, table],
+  );
+
   return (
-    <DataTableNew
-      table={table}
-      columns={columns}
-      dndEnabled={rowDragEnabled}
-      onReorder={rowDragEnabled ? setData : undefined}
-      density={rowDensity}
-      onRowDoubleClick={handleRowDoubleClick}
-      rowContextMenu={rowContextMenu}
-      className="w-auto [&_thead_tr]:border-transparent"
-    />
+    <button
+      ref={tableRef}
+      type="button"
+      className="block w-full text-left focus:outline-hidden"
+      onKeyDown={handleKeyDown}
+      onPointerDownCapture={(event) => {
+        if (isInteractiveTarget(event.target)) return;
+        tableRef.current?.focus();
+      }}
+    >
+      <DataTableNew
+        table={table}
+        columns={columns}
+        dndEnabled={rowDragEnabled}
+        onReorder={rowDragEnabled ? setData : undefined}
+        density={rowDensity}
+        onRowDoubleClick={handleRowDoubleClick}
+        rowContextMenu={rowContextMenu}
+        className="w-auto [&_thead_tr]:border-transparent"
+      />
+    </button>
   );
 }
 
