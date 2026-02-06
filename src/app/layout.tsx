@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import type { Metadata } from "next";
 
+import { DisableGlobalSelectAll } from "@/components/shortcuts/disable-global-select-all";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_CONFIG } from "@/config/app-config";
 import { fontVars } from "@/lib/fonts/registry";
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           font={font}
         >
           {children}
+          <DisableGlobalSelectAll />
           <Toaster />
         </PreferencesStoreProvider>
       </body>
