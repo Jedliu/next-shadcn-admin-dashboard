@@ -48,6 +48,9 @@ export function useDataTableInstance<TData, TValue>({
   const table = useReactTable({
     data,
     columns,
+    initialState: {
+      columnVisibility: defaultColumnVisibility ?? {},
+    },
     state: {
       sorting,
       columnVisibility,
