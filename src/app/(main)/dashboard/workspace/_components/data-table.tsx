@@ -3,7 +3,7 @@
 
 import * as React from "react";
 
-import type { Row, Table } from "@tanstack/react-table";
+import type { ColumnDef, Row, Table } from "@tanstack/react-table";
 import { Copy, ExternalLink, GripVerticalIcon, ListFilterPlus, Plus, Search, Trash2, XIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { z } from "zod";
@@ -33,7 +33,58 @@ import { DataTableViewOptions } from "../../../../../components/data-table/data-
 import { withDndColumn } from "../../../../../components/data-table/table-utils";
 import { dashboardColumns } from "./columns";
 import type { sectionSchema } from "./schema";
-import { TableCellViewerDrawer, TableCellViewerInset, TableCellViewerProvider } from "./table-cell-viewer";
+import {
+  TableCellViewerDrawer,
+  TableCellViewerInset,
+  TableCellViewerProvider,
+  useTableCellViewer,
+} from "./table-cell-viewer";
+
+type WorkspaceTableProps = {
+  table: Table<z.infer<typeof sectionSchema>>;
+  columns: ColumnDef<z.infer<typeof sectionSchema>>[];
+  rowDragEnabled: boolean;
+  setData: React.Dispatch<React.SetStateAction<z.infer<typeof sectionSchema>[]>>;
+  rowDensity: "compact" | "normal" | "comfortable";
+  rowContextMenu: ({
+    row,
+    table,
+    selectedRows,
+  }: {
+    row: Row<z.infer<typeof sectionSchema>>;
+    table: Table<z.infer<typeof sectionSchema>>;
+    selectedRows: Row<z.infer<typeof sectionSchema>>[];
+  }) => React.ReactNode;
+};
+
+function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, rowContextMenu }: WorkspaceTableProps) {
+  const { setItem, setOpen } = useTableCellViewer();
+
+  const handleRowDoubleClick = React.useCallback(
+    (
+      row: Row<z.infer<typeof sectionSchema>>,
+      _table: Table<z.infer<typeof sectionSchema>>,
+      _event: React.MouseEvent<HTMLTableRowElement>,
+    ) => {
+      setItem(row.original);
+      setOpen(true);
+    },
+    [setItem, setOpen],
+  );
+
+  return (
+    <DataTableNew
+      table={table}
+      columns={columns}
+      dndEnabled={rowDragEnabled}
+      onReorder={rowDragEnabled ? setData : undefined}
+      density={rowDensity}
+      onRowDoubleClick={handleRowDoubleClick}
+      rowContextMenu={rowContextMenu}
+      className="w-auto [&_thead_tr]:border-transparent"
+    />
+  );
+}
 
 type FacetFilters = {
   client?: string[];
@@ -947,14 +998,13 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border">
                 <div className="relative z-10 min-h-0 flex-1 overflow-auto">
-                  <DataTableNew
+                  <WorkspaceTable
                     table={table}
                     columns={columns}
-                    dndEnabled={rowDragEnabled}
-                    onReorder={rowDragEnabled ? setData : undefined}
-                    density={rowDensity}
+                    rowDragEnabled={rowDragEnabled}
+                    setData={setData}
+                    rowDensity={rowDensity}
                     rowContextMenu={rowContextMenu}
-                    className="w-auto [&_thead_tr]:border-transparent"
                   />
                 </div>
               </div>

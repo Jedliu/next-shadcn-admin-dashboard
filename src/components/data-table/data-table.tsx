@@ -37,6 +37,11 @@ interface DataTableProps<TData, TValue> {
   density?: "compact" | "normal" | "comfortable";
   className?: string;
   rowContextMenu?: DataTableRowContextMenu<TData>;
+  onRowDoubleClick?: (
+    row: Row<TData>,
+    table: TanStackTable<TData>,
+    event: React.MouseEvent<HTMLTableRowElement>,
+  ) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -47,6 +52,7 @@ export function DataTable<TData, TValue>({
   density = "normal",
   className,
   rowContextMenu,
+  onRowDoubleClick,
 }: DataTableProps<TData, TValue>) {
   const densityClass =
     density === "compact"
@@ -225,6 +231,12 @@ export function DataTable<TData, TValue>({
       onPointerEnter: (event: React.PointerEvent<HTMLTableRowElement>) => handleRowPointerEnter(event, row),
       onContextMenu: rowContextMenu
         ? (event: React.MouseEvent<HTMLTableRowElement>) => handleRowContextMenu(event, row)
+        : undefined,
+      onDoubleClick: onRowDoubleClick
+        ? (event: React.MouseEvent<HTMLTableRowElement>) => {
+            if (isEventFromInteractiveElement(event.target)) return;
+            onRowDoubleClick(row, table, event);
+          }
         : undefined,
       className: cn(row.getCanSelect() && "cursor-pointer"),
     };

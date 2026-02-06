@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 
 import { DataTableColumnHeader } from "../../../../../components/data-table/data-table-column-header";
 import type { sectionSchema } from "./schema";
-import { TableCellViewer } from "./table-cell-viewer";
 
 function formatMs(value?: number) {
   if (typeof value !== "number" || Number.isNaN(value)) return "";
@@ -107,7 +106,7 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     header: ({ column }) => <DataTableColumnHeader column={column} title="URL" />,
     cell: ({ row }) => {
       const label = row.original.url ?? row.original.target ?? "";
-      return <TableCellViewer item={row.original} label={label} />;
+      return <span className="min-w-0 truncate">{label}</span>;
     },
     size: 420,
     minSize: 160,

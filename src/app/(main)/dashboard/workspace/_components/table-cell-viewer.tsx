@@ -38,7 +38,7 @@ type TableCellViewerContextValue = {
 
 const TableCellViewerContext = React.createContext<TableCellViewerContextValue | null>(null);
 
-function useTableCellViewer() {
+export function useTableCellViewer() {
   const context = React.useContext(TableCellViewerContext);
   if (!context) {
     throw new Error("TableCellViewerProvider is missing");
