@@ -60,6 +60,7 @@ type WorkspaceTableProps = {
 function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, rowContextMenu }: WorkspaceTableProps) {
   const { open, setItem, setOpen } = useTableCellViewer();
   const tableRef = React.useRef<HTMLDivElement | null>(null);
+  const isActiveRef = React.useRef(false);
   const currentRowIdRef = React.useRef<string | null>(null);
 
   const isInteractiveTarget = React.useCallback((target: EventTarget | null) => {
@@ -96,7 +97,8 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
   );
 
   const handleKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
+    (event: KeyboardEvent) => {
+      if (!isActiveRef.current) return;
       if (event.defaultPrevented) return;
       if (isInteractiveTarget(event.target)) return;
 
@@ -136,17 +138,23 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
     [isInteractiveTarget, open, setItem, setOpen, table],
   );
 
+  React.useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!tableRef.current) return;
+      if (!(event.target instanceof Node)) return;
+      isActiveRef.current = tableRef.current.contains(event.target);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("pointerdown", handlePointerDown, true);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("pointerdown", handlePointerDown, true);
+    };
+  }, [handleKeyDown]);
+
   return (
-    <button
-      ref={tableRef}
-      type="button"
-      className="block w-full text-left focus:outline-hidden"
-      onKeyDown={handleKeyDown}
-      onPointerDownCapture={(event) => {
-        if (isInteractiveTarget(event.target)) return;
-        tableRef.current?.focus();
-      }}
-    >
+    <div ref={tableRef} className="w-full">
       <DataTableNew
         table={table}
         columns={columns}
@@ -157,7 +165,7 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
         rowContextMenu={rowContextMenu}
         className="w-auto [&_thead_tr]:border-transparent"
       />
-    </button>
+    </div>
   );
 }
 
