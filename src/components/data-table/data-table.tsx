@@ -64,6 +64,8 @@ export function DataTable<TData, TValue>({
   const dragSelectingRef = React.useRef(false);
   const dragAnchorIdRef = React.useRef<string | null>(null);
   const dragCurrentIdRef = React.useRef<string | null>(null);
+  const resizingRef = React.useRef(false);
+  const lastResizeAtRef = React.useRef(0);
 
   const stopDragSelection = React.useCallback(() => {
     dragSelectingRef.current = false;
@@ -72,7 +74,13 @@ export function DataTable<TData, TValue>({
   }, []);
 
   React.useEffect(() => {
-    const handlePointerUp = () => stopDragSelection();
+    const handlePointerUp = () => {
+      if (resizingRef.current) {
+        lastResizeAtRef.current = Date.now();
+      }
+      stopDragSelection();
+      resizingRef.current = false;
+    };
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerUp);
     return () => {
@@ -106,6 +114,11 @@ export function DataTable<TData, TValue>({
       onReorder(newData);
     }
   }
+
+  const markResizing = React.useCallback((event: React.SyntheticEvent) => {
+    event.stopPropagation();
+    resizingRef.current = true;
+  }, []);
 
   const selectRange = React.useCallback(
     (anchorId: string, targetId: string) => {
@@ -262,6 +275,7 @@ export function DataTable<TData, TValue>({
                 const canSort = header.column.getCanSort() && !header.isPlaceholder;
                 const handleSort = () => {
                   if (!canSort) return;
+                  if (resizingRef.current || Date.now() - lastResizeAtRef.current < 200) return;
 
                   const currentSort = header.column.getIsSorted();
                   if (currentSort === false) {
@@ -291,11 +305,11 @@ export function DataTable<TData, TValue>({
                     {header.column.getCanResize() && (
                       <div
                         onMouseDown={(event) => {
-                          event.stopPropagation();
+                          markResizing(event);
                           header.getResizeHandler()(event);
                         }}
                         onTouchStart={(event) => {
-                          event.stopPropagation();
+                          markResizing(event);
                           header.getResizeHandler()(event);
                         }}
                         onClick={(event) => event.stopPropagation()}
