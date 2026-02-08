@@ -129,11 +129,24 @@ These serve as the fallback; there is no separate default.css file. */
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans), system-ui, sans-serif;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"],
+  [contenteditable=""],
+  [role="textbox"],
+  [role="searchbox"],
+  [data-allow-select] {
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   button:not(:disabled),
