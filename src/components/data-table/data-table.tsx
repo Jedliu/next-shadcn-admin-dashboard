@@ -38,6 +38,7 @@ interface DataTableProps<TData, TValue> {
   className?: string;
   rowContextMenu?: DataTableRowContextMenu<TData>;
   enableKeyboardSelection?: boolean;
+  fillEmptyRows?: boolean;
   onRowDoubleClick?: (
     row: Row<TData>,
     table: TanStackTable<TData>,
@@ -54,6 +55,7 @@ export function DataTable<TData, TValue>({
   className,
   rowContextMenu,
   enableKeyboardSelection = false,
+  fillEmptyRows = false,
   onRowDoubleClick,
 }: DataTableProps<TData, TValue>) {
   const densityClass =
@@ -77,6 +79,7 @@ export function DataTable<TData, TValue>({
   const keyboardActiveRef = React.useRef(false);
   const keyboardRootRef = React.useRef<HTMLDivElement | null>(null);
   const keyboardFocusRef = React.useRef<HTMLButtonElement | null>(null);
+  const [maxFillRows, setMaxFillRows] = React.useState(0);
 
   const stopDragSelection = React.useCallback(() => {
     dragSelectingRef.current = false;
@@ -288,6 +291,31 @@ export function DataTable<TData, TValue>({
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const rows = table.getRowModel().rows;
+  const visibleColumnCount = table.getVisibleLeafColumns().length;
+  const emptyRowHeightClass = density === "compact" ? "h-8" : density === "comfortable" ? "h-12" : "h-10";
+  const rowHeightPx = density === "compact" ? 32 : density === "comfortable" ? 48 : 40;
+  const headerHeightPx = rowHeightPx;
+  const emptyRowCount = fillEmptyRows && rows.length > 0 ? Math.max(maxFillRows - rows.length, 0) : 0;
+
+  React.useEffect(() => {
+    if (!fillEmptyRows) return;
+    const parent = keyboardRootRef.current?.parentElement;
+    if (!parent) return;
+
+    const computeRows = () => {
+      const height = parent.clientHeight;
+      const available = Math.max(height - headerHeightPx, 0);
+      const rowsFit = Math.floor(available / rowHeightPx);
+      setMaxFillRows(rowsFit);
+    };
+
+    computeRows();
+
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => computeRows());
+    observer.observe(parent);
+    return () => observer.disconnect();
+  }, [fillEmptyRows, headerHeightPx, rowHeightPx]);
 
   const renderRow = (row: Row<TData>) => {
     const rowProps = {
@@ -408,16 +436,32 @@ export function DataTable<TData, TValue>({
         <TableBody className="**:data-[slot=table-cell]:first:w-8">
           {!rows.length ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
+              <TableCell colSpan={visibleColumnCount} className="h-24 text-center">
                 No results.
               </TableCell>
             </TableRow>
           ) : dndEnabled ? (
             <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
               {rows.map((row) => renderRow(row))}
+              {emptyRowCount > 0
+                ? Array.from({ length: emptyRowCount }, (_, index) => (
+                    <TableRow key={`empty-${index}`} aria-hidden className="pointer-events-none">
+                      <TableCell colSpan={visibleColumnCount} className={emptyRowHeightClass} />
+                    </TableRow>
+                  ))
+                : null}
             </SortableContext>
           ) : (
-            rows.map((row) => renderRow(row))
+            <>
+              {rows.map((row) => renderRow(row))}
+              {emptyRowCount > 0
+                ? Array.from({ length: emptyRowCount }, (_, index) => (
+                    <TableRow key={`empty-${index}`} aria-hidden className="pointer-events-none">
+                      <TableCell colSpan={visibleColumnCount} className={emptyRowHeightClass} />
+                    </TableRow>
+                  ))
+                : null}
+            </>
           )}
         </TableBody>
       </table>

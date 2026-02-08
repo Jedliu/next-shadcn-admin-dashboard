@@ -578,6 +578,7 @@ export function PluginsPanel() {
                   density={rowDensity}
                   rowContextMenu={rowContextMenu}
                   enableKeyboardSelection
+                  fillEmptyRows
                   className="w-auto [&_thead_tr]:border-transparent"
                 />
               </div>

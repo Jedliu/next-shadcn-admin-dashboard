@@ -160,6 +160,7 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
         onRowDoubleClick={handleRowDoubleClick}
         rowContextMenu={rowContextMenu}
         enableKeyboardSelection
+        fillEmptyRows
         className="w-auto [&_thead_tr]:border-transparent"
       />
     </div>
