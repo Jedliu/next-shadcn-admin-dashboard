@@ -577,6 +577,7 @@ export function PluginsPanel() {
                   onReorder={handleReorder}
                   density={rowDensity}
                   rowContextMenu={rowContextMenu}
+                  enableKeyboardSelection
                   className="w-auto [&_thead_tr]:border-transparent"
                 />
               </div>

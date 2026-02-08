@@ -11,7 +11,7 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 type DraggableRowProps = React.ComponentPropsWithoutRef<"tr"> & {
-  row: Row<unknown>;
+  row: Row<any>;
 };
 
 export const DraggableRow = React.forwardRef<HTMLTableRowElement, DraggableRowProps>(function DraggableRowInner(

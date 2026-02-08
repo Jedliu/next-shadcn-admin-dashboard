@@ -60,18 +60,8 @@ type WorkspaceTableProps = {
 function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, rowContextMenu }: WorkspaceTableProps) {
   const { open, setItem, setOpen } = useTableCellViewer();
   const tableRef = React.useRef<HTMLDivElement | null>(null);
-  const focusSinkRef = React.useRef<HTMLButtonElement | null>(null);
   const isActiveRef = React.useRef(false);
   const currentRowIdRef = React.useRef<string | null>(null);
-
-  const isInteractiveTarget = React.useCallback((target: EventTarget | null) => {
-    if (!(target instanceof HTMLElement)) return false;
-    return Boolean(
-      target.closest(
-        "button,a,input,textarea,select,option,[role='button'],[role='checkbox'],[role='menuitem'],[data-row-select-ignore]",
-      ),
-    );
-  }, []);
 
   const isEditableTarget = React.useCallback((target: EventTarget | null) => {
     if (!(target instanceof HTMLElement)) return false;
@@ -105,8 +95,7 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
   const handleKeyDown = React.useCallback(
     (event: KeyboardEvent) => {
       if (!isActiveRef.current) return;
-      const isSelectAllShortcut = (event.key === "a" || event.key === "A") && (event.metaKey || event.ctrlKey);
-      if (event.defaultPrevented && !isSelectAllShortcut) return;
+      if (event.defaultPrevented) return;
       if (isEditableTarget(event.target)) return;
 
       const rows = table.getRowModel().rows;
@@ -131,24 +120,6 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
         return;
       }
 
-      if (event.key === "Escape" || event.key === "Esc") {
-        if (table.getSelectedRowModel().rows.length === 0) return;
-        event.preventDefault();
-        table.resetRowSelection();
-        return;
-      }
-
-      if (isSelectAllShortcut) {
-        event.preventDefault();
-        const nextSelection: Record<string, boolean> = {};
-        rows.forEach((row) => {
-          nextSelection[row.id] = true;
-        });
-        table.setRowSelection(nextSelection);
-        currentRowIdRef.current = rows[0]?.id ?? null;
-        return;
-      }
-
       if (event.key === " " || event.key === "Spacebar") {
         event.preventDefault();
         const targetIndex = fallbackIndex >= 0 ? fallbackIndex : 0;
@@ -167,11 +138,7 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
     const handlePointerDown = (event: PointerEvent) => {
       if (!tableRef.current) return;
       if (!(event.target instanceof Node)) return;
-      const isInside = tableRef.current.contains(event.target);
-      isActiveRef.current = isInside;
-      if (isInside && !isInteractiveTarget(event.target)) {
-        focusSinkRef.current?.focus({ preventScroll: true });
-      }
+      isActiveRef.current = tableRef.current.contains(event.target);
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -180,11 +147,10 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("pointerdown", handlePointerDown, true);
     };
-  }, [handleKeyDown, isInteractiveTarget]);
+  }, [handleKeyDown]);
 
   return (
     <div ref={tableRef} className="w-full">
-      <button ref={focusSinkRef} type="button" tabIndex={-1} aria-label="Table focus" className="sr-only" />
       <DataTableNew
         table={table}
         columns={columns}
@@ -193,6 +159,7 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
         density={rowDensity}
         onRowDoubleClick={handleRowDoubleClick}
         rowContextMenu={rowContextMenu}
+        enableKeyboardSelection
         className="w-auto [&_thead_tr]:border-transparent"
       />
     </div>

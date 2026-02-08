@@ -37,6 +37,7 @@ interface DataTableProps<TData, TValue> {
   density?: "compact" | "normal" | "comfortable";
   className?: string;
   rowContextMenu?: DataTableRowContextMenu<TData>;
+  enableKeyboardSelection?: boolean;
   onRowDoubleClick?: (
     row: Row<TData>,
     table: TanStackTable<TData>,
@@ -52,6 +53,7 @@ export function DataTable<TData, TValue>({
   density = "normal",
   className,
   rowContextMenu,
+  enableKeyboardSelection = false,
   onRowDoubleClick,
 }: DataTableProps<TData, TValue>) {
   const densityClass =
@@ -72,6 +74,9 @@ export function DataTable<TData, TValue>({
   const dragCurrentIdRef = React.useRef<string | null>(null);
   const resizingRef = React.useRef(false);
   const lastResizeAtRef = React.useRef(0);
+  const keyboardActiveRef = React.useRef(false);
+  const keyboardRootRef = React.useRef<HTMLDivElement | null>(null);
+  const keyboardFocusRef = React.useRef<HTMLButtonElement | null>(null);
 
   const stopDragSelection = React.useCallback(() => {
     dragSelectingRef.current = false;
@@ -109,6 +114,11 @@ export function DataTable<TData, TValue>({
     return Boolean(target.closest("input,textarea,[contenteditable='true']"));
   }, []);
 
+  const isEditableTarget = React.useCallback((target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    return Boolean(target.closest("input,textarea,[contenteditable='true'],[role='textbox'],[role='searchbox']"));
+  }, []);
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (active && over && active.id !== over.id && onReorder) {
@@ -120,6 +130,60 @@ export function DataTable<TData, TValue>({
       onReorder(newData);
     }
   }
+
+  const handleKeyboardSelection = React.useCallback(
+    (event: KeyboardEvent) => {
+      if (!enableKeyboardSelection) return;
+      if (!keyboardActiveRef.current) return;
+
+      const isSelectAllShortcut = (event.key === "a" || event.key === "A") && (event.metaKey || event.ctrlKey);
+      const isEscape = event.key === "Escape" || event.key === "Esc";
+      if (!isSelectAllShortcut && !isEscape) return;
+      if (isEditableTarget(event.target)) return;
+
+      if (isSelectAllShortcut) {
+        event.preventDefault();
+        table.toggleAllPageRowsSelected(true);
+        return;
+      }
+
+      if (isEscape) {
+        if (table.getSelectedRowModel().rows.length === 0) return;
+        event.preventDefault();
+        table.resetRowSelection();
+      }
+    },
+    [enableKeyboardSelection, isEditableTarget, table],
+  );
+
+  React.useEffect(() => {
+    if (!enableKeyboardSelection) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!keyboardRootRef.current) return;
+      if (!(event.target instanceof Node)) return;
+      const isInside = keyboardRootRef.current.contains(event.target);
+      keyboardActiveRef.current = isInside;
+      if (isInside && !isEventFromInteractiveElement(event.target)) {
+        keyboardFocusRef.current?.focus({ preventScroll: true });
+      }
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      if (!keyboardRootRef.current) return;
+      if (!(event.target instanceof Node)) return;
+      keyboardActiveRef.current = keyboardRootRef.current.contains(event.target);
+    };
+
+    window.addEventListener("keydown", handleKeyboardSelection);
+    window.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("focusin", handleFocusIn, true);
+    return () => {
+      window.removeEventListener("keydown", handleKeyboardSelection);
+      window.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("focusin", handleFocusIn, true);
+    };
+  }, [enableKeyboardSelection, handleKeyboardSelection, isEventFromInteractiveElement]);
 
   const markResizing = React.useCallback((event: React.SyntheticEvent) => {
     event.stopPropagation();
@@ -271,7 +335,10 @@ export function DataTable<TData, TValue>({
   };
 
   const tableContent = (
-    <div className="relative w-full">
+    <div ref={keyboardRootRef} className="relative w-full">
+      {enableKeyboardSelection ? (
+        <button ref={keyboardFocusRef} type="button" tabIndex={-1} aria-label="Table focus" className="sr-only" />
+      ) : null}
       <div
         aria-hidden="true"
         className={cn("pointer-events-none absolute inset-x-0 top-0 z-0 bg-muted", headerBandClass)}
