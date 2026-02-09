@@ -80,6 +80,8 @@ export function DataTable<TData, TValue>({
   const keyboardRootRef = React.useRef<HTMLDivElement | null>(null);
   const keyboardFocusRef = React.useRef<HTMLButtonElement | null>(null);
   const [maxFillRows, setMaxFillRows] = React.useState(0);
+  const lastRowsFitRef = React.useRef(0);
+  const resizeRafRef = React.useRef<number | null>(null);
 
   const stopDragSelection = React.useCallback(() => {
     dragSelectingRef.current = false;
@@ -301,20 +303,40 @@ export function DataTable<TData, TValue>({
     if (!fillEmptyRows) return;
     const parent = keyboardRootRef.current?.parentElement;
     if (!parent) return;
+    const maxRowsCap = 60;
 
     const computeRows = () => {
       const height = parent.clientHeight;
       const available = Math.max(height - headerHeightPx, 0);
-      const rowsFit = Math.floor(available / rowHeightPx);
-      setMaxFillRows(rowsFit);
+      const rowsFit = Math.min(Math.floor(available / rowHeightPx), maxRowsCap);
+      if (rowsFit !== lastRowsFitRef.current) {
+        lastRowsFitRef.current = rowsFit;
+        setMaxFillRows(rowsFit);
+      }
+    };
+
+    const scheduleCompute = () => {
+      if (resizeRafRef.current !== null) {
+        cancelAnimationFrame(resizeRafRef.current);
+      }
+      resizeRafRef.current = requestAnimationFrame(() => {
+        resizeRafRef.current = null;
+        computeRows();
+      });
     };
 
     computeRows();
 
     if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => computeRows());
+    const observer = new ResizeObserver(() => scheduleCompute());
     observer.observe(parent);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (resizeRafRef.current !== null) {
+        cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
+    };
   }, [fillEmptyRows, headerHeightPx, rowHeightPx]);
 
   const renderRow = (row: Row<TData>) => {
