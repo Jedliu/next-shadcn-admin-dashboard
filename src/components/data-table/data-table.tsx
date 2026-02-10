@@ -106,7 +106,7 @@ export function DataTable<TData, TValue>({
   }, [stopDragSelection]);
 
   const isEventFromInteractiveElement = React.useCallback((target: EventTarget | null) => {
-    if (!(target instanceof HTMLElement)) return false;
+    if (!(target instanceof Element)) return false;
     return Boolean(
       target.closest(
         "button,a,input,textarea,select,option,[role='button'],[role='checkbox'],[role='menuitem'],[data-row-select-ignore]",
@@ -115,12 +115,12 @@ export function DataTable<TData, TValue>({
   }, []);
 
   const isEventFromTextInput = React.useCallback((target: EventTarget | null) => {
-    if (!(target instanceof HTMLElement)) return false;
+    if (!(target instanceof Element)) return false;
     return Boolean(target.closest("input,textarea,[contenteditable='true']"));
   }, []);
 
   const isEditableTarget = React.useCallback((target: EventTarget | null) => {
-    if (!(target instanceof HTMLElement)) return false;
+    if (!(target instanceof Element)) return false;
     return Boolean(target.closest("input,textarea,[contenteditable='true'],[role='textbox'],[role='searchbox']"));
   }, []);
 
@@ -220,7 +220,7 @@ export function DataTable<TData, TValue>({
       if (event.button !== 0) return;
       if (!row.getCanSelect()) return;
       if (isEventFromInteractiveElement(event.target)) {
-        if (event.target instanceof HTMLElement && event.target.closest("[role='checkbox'],input[type='checkbox']")) {
+        if (event.target instanceof Element && event.target.closest("[role='checkbox'],input[type='checkbox']")) {
           lastSelectedIdRef.current = row.id;
         }
         return;
@@ -356,9 +356,13 @@ export function DataTable<TData, TValue>({
     };
 
     const rowElement = dndEnabled ? (
-      <DraggableRow row={row} {...rowProps} />
+      <DraggableRow row={row} data-selected={row.getIsSelected() || undefined} {...rowProps} />
     ) : (
-      <TableRow data-state={row.getIsSelected() && "selected"} {...rowProps}>
+      <TableRow
+        data-state={row.getIsSelected() && "selected"}
+        data-selected={row.getIsSelected() || undefined}
+        {...rowProps}
+      >
         {row.getVisibleCells().map((cell) => (
           <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
             {flexRender(cell.column.columnDef.cell, cell.getContext())}

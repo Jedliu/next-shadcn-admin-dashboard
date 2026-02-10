@@ -2,12 +2,14 @@
 
 import * as React from "react";
 
-import { Clock, Copy, Database, Hand, Pencil, Pin, Search, Trash2, Zap } from "lucide-react";
+import { Clock, Copy, Database, Hand, Pin, Search, Trash2, Zap } from "lucide-react";
 
+import { DataTable } from "@/components/data-table/data-table";
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
+import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { cn } from "@/lib/utils";
 
 import { useQuickCreate } from "./quick-create-provider";
@@ -94,40 +96,36 @@ function kindIcon(kind: HistoryKind) {
 }
 
 export function HistoryPanel({ className }: { readonly className?: string }) {
-  const {
-    historyFilters,
-    setHistoryFilters,
-    historySearch,
-    setHistorySearch,
-    historySelectedIds,
-    setHistorySelectedIds,
-    historyPinnedIds,
-    setHistoryPinnedIds,
-  } = useQuickCreate();
+  const { historyFilters, setHistoryFilters, historySearch, setHistorySearch, historyPinnedIds, setHistoryPinnedIds } =
+    useQuickCreate();
 
   const [items] = React.useState<HistoryItem[]>(seedHistory);
   const pinnedSet = React.useMemo(() => new Set(historyPinnedIds), [historyPinnedIds]);
+  const pinnedSetRef = React.useRef(pinnedSet);
+  pinnedSetRef.current = pinnedSet;
+  const searchFilteredItems = React.useMemo(() => {
+    const q = historySearch.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((item) => item.title.toLowerCase().includes(q) || item.timestamp.toLowerCase().includes(q));
+  }, [items, historySearch]);
+
   const counts = React.useMemo(() => {
-    const manual = items.filter((i) => i.kind === "manual").length;
-    const auto = items.filter((i) => i.kind === "auto").length;
-    const pinned = items.filter((i) => pinnedSet.has(i.id)).length;
+    const manual = searchFilteredItems.filter((i) => i.kind === "manual").length;
+    const auto = searchFilteredItems.filter((i) => i.kind === "auto").length;
+    const pinned = searchFilteredItems.filter((i) => pinnedSet.has(i.id)).length;
     return { manual, auto, pinned };
-  }, [items, pinnedSet]);
+  }, [pinnedSet, searchFilteredItems]);
 
   const visibleItems = React.useMemo(() => {
-    const q = historySearch.trim().toLowerCase();
-    return items.filter((item) => {
-      if (historyFilters.length > 0) {
-        const matchesPinned = historyFilters.includes("pinned") && pinnedSet.has(item.id);
-        const matchesKind =
-          (historyFilters.includes("auto") && item.kind === "auto") ||
-          (historyFilters.includes("manual") && item.kind === "manual");
-        if (!matchesPinned && !matchesKind) return false;
-      }
-      if (!q) return true;
-      return item.title.toLowerCase().includes(q) || item.timestamp.toLowerCase().includes(q);
+    if (historyFilters.length === 0) return searchFilteredItems;
+    return searchFilteredItems.filter((item) => {
+      const matchesPinned = historyFilters.includes("pinned") && pinnedSet.has(item.id);
+      const matchesKind =
+        (historyFilters.includes("auto") && item.kind === "auto") ||
+        (historyFilters.includes("manual") && item.kind === "manual");
+      return matchesPinned || matchesKind;
     });
-  }, [items, historyFilters, historySearch, pinnedSet]);
+  }, [historyFilters, pinnedSet, searchFilteredItems]);
 
   const togglePinned = React.useCallback(
     (id: string) => {
@@ -136,11 +134,128 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
     [setHistoryPinnedIds],
   );
 
-  const toggleSelected = React.useCallback(
-    (id: string) => {
-      setHistorySelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  const columns = React.useMemo<import("@tanstack/react-table").ColumnDef<HistoryItem>[]>(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <div className="flex items-center justify-center">
+            <Checkbox
+              checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+              onCheckedChange={(value) => table.toggleAllPageRowsSelected(Boolean(value))}
+              aria-label="Select all"
+            />
+          </div>
+        ),
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center">
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
+              aria-label="Select row"
+            />
+          </div>
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        size: 40,
+        minSize: 40,
+        maxSize: 40,
+      },
+      {
+        id: "kind",
+        header: () => null,
+        cell: ({ row }) => <div className="flex items-center justify-center">{kindIcon(row.original.kind)}</div>,
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        size: 40,
+        minSize: 40,
+        maxSize: 40,
+      },
+      {
+        accessorKey: "title",
+        header: () => <span className="text-xs uppercase tracking-wide text-muted-foreground">Title</span>,
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 truncate font-medium text-sm">{row.original.title}</span>
+              {pinnedSetRef.current.has(row.original.id) ? <Pin className="size-3 text-primary" /> : null}
+            </div>
+            <div className="mt-1 flex items-center gap-2 text-muted-foreground text-xs">
+              <Clock className="size-3" />
+              <span className="font-mono tabular-nums">{row.original.timestamp}</span>
+            </div>
+          </div>
+        ),
+        enableSorting: false,
+        size: 320,
+        minSize: 200,
+      },
+      {
+        accessorKey: "records",
+        header: () => <span className="text-xs uppercase tracking-wide text-muted-foreground">Records</span>,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <Database className="size-4" />
+            <span className="font-mono tabular-nums">{row.original.records}</span>
+          </div>
+        ),
+        enableSorting: false,
+        size: 120,
+        minSize: 100,
+      },
+    ],
+    [],
+  );
+
+  const getRowId = React.useCallback((row: HistoryItem) => row.id, []);
+
+  const table = useDataTableInstance({
+    data: visibleItems,
+    columns,
+    enableRowSelection: true,
+    defaultPageSize: Math.max(visibleItems.length, 1),
+    getRowId,
+  });
+
+  const rowContextMenu = React.useCallback(
+    ({ row }: { row: { original: HistoryItem } }) => {
+      const isPinned = pinnedSet.has(row.original.id);
+      return (
+        <>
+          <ContextMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              togglePinned(row.original.id);
+            }}
+          >
+            <Pin className="size-4 text-muted-foreground" />
+            {isPinned ? "Unpin" : "Pin"}
+          </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+            }}
+          >
+            <Copy className="size-4 text-muted-foreground" />
+            Copy
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            variant="destructive"
+            onSelect={(event) => {
+              event.preventDefault();
+            }}
+          >
+            <Trash2 className="size-4" />
+            Delete
+          </ContextMenuItem>
+        </>
+      );
     },
-    [setHistorySelectedIds],
+    [pinnedSet, togglePinned],
   );
 
   return (
@@ -172,79 +287,17 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {visibleItems.length ? (
-          visibleItems.map((item) => {
-            const selected = historySelectedIds.includes(item.id);
-            const isPinned = pinnedSet.has(item.id);
-            return (
-              <div
-                key={item.id}
-                className={cn(
-                  "group flex w-full items-start gap-3 border-b px-3 py-3 text-left text-sm transition-colors hover:bg-muted/30",
-                  selected && "bg-muted/40",
-                )}
-              >
-                <div className="flex min-w-0 flex-1 items-start gap-3 text-left">
-                  <div className="mt-1 shrink-0">{kindIcon(item.kind)}</div>
-                  <div className="min-w-0 flex-1">
-                    <button
-                      type="button"
-                      onClick={() => toggleSelected(item.id)}
-                      className="min-w-0 truncate text-left font-normal"
-                    >
-                      {item.title}
-                    </button>
-                    <div className="mt-1 flex items-center gap-2 text-muted-foreground text-sm">
-                      <Checkbox
-                        checked={selected}
-                        onCheckedChange={() => toggleSelected(item.id)}
-                        aria-label={`Select ${item.title}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => toggleSelected(item.id)}
-                        className="flex items-center gap-2 text-muted-foreground"
-                      >
-                        <Clock className="size-4" />
-                        <span className="font-mono tabular-nums">{item.timestamp}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 flex-col items-end gap-2">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Database className="size-4" />
-                    <span className="font-mono tabular-nums">{item.records}</span>
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      title={isPinned ? "Unpin" : "Pin"}
-                      onClick={() => togglePinned(item.id)}
-                      className={isPinned ? "text-primary" : undefined}
-                    >
-                      <Pin className="size-4" />
-                      <span className="sr-only">{isPinned ? "Unpin" : "Pin"}</span>
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon-sm" title="Copy">
-                      <Copy className="size-4" />
-                      <span className="sr-only">Copy</span>
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon-sm" title="Rename">
-                      <Pencil className="size-4" />
-                      <span className="sr-only">Rename</span>
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon-sm" title="Delete">
-                      <Trash2 className="size-4" />
-                      <span className="sr-only">Delete</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            );
-          })
+          <div className="min-h-0 flex-1">
+            <DataTable
+              table={table}
+              columns={columns}
+              density="compact"
+              rowContextMenu={rowContextMenu}
+              enableKeyboardSelection
+              fillEmptyRows
+              className="w-full [&_thead_tr]:border-transparent"
+            />
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-2 p-8 text-center">
             <div className="font-medium text-sm">No history found</div>
