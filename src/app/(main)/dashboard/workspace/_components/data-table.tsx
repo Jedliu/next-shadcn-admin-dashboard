@@ -13,7 +13,7 @@ import { SelectionActionBar } from "@/components/data-table/selection-action-bar
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu";
+import { ContextMenuItem, ContextMenuSeparator, ContextMenuShortcut } from "@/components/ui/context-menu";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Field, FieldLabel, FieldTitle } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -55,9 +55,18 @@ type WorkspaceTableProps = {
     table: Table<z.infer<typeof sectionSchema>>;
     selectedRows: Row<z.infer<typeof sectionSchema>>[];
   }) => React.ReactNode;
+  onDeleteRows: (rows: Row<z.infer<typeof sectionSchema>>[]) => void;
 };
 
-function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, rowContextMenu }: WorkspaceTableProps) {
+function WorkspaceTable({
+  table,
+  columns,
+  rowDragEnabled,
+  setData,
+  rowDensity,
+  rowContextMenu,
+  onDeleteRows,
+}: WorkspaceTableProps) {
   const { open, setItem, setOpen } = useTableCellViewer();
   const tableRef = React.useRef<HTMLDivElement | null>(null);
   const isActiveRef = React.useRef(false);
@@ -105,6 +114,24 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
       const selectedIndex = selectedId ? rows.findIndex((row) => row.id === selectedId) : -1;
       const fallbackIndex = selectedIndex >= 0 ? selectedIndex : rows.findIndex((row) => row.getIsSelected());
 
+      if (event.key === "Escape") {
+        // If context menu is open, let it close first
+        if (document.querySelector("[data-radix-menu-content]")) return;
+        const selectedRows = table.getSelectedRowModel().rows;
+        if (selectedRows.length === 0) return;
+        event.preventDefault();
+        table.resetRowSelection();
+        return;
+      }
+
+      if (event.key === "Backspace" || event.key === "Delete") {
+        const selectedRows = table.getSelectedRowModel().rows;
+        if (selectedRows.length === 0) return;
+        event.preventDefault();
+        onDeleteRows(selectedRows);
+        return;
+      }
+
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
         const direction = event.key === "ArrowDown" ? 1 : -1;
@@ -131,7 +158,7 @@ function WorkspaceTable({ table, columns, rowDragEnabled, setData, rowDensity, r
         setOpen(true);
       }
     },
-    [isEditableTarget, open, setItem, setOpen, table],
+    [isEditableTarget, onDeleteRows, open, setItem, setOpen, table],
   );
 
   React.useEffect(() => {
@@ -958,6 +985,16 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     void navigator.clipboard?.writeText(value);
   }, []);
 
+  const handleDeleteRows = React.useCallback(
+    (rows: Row<z.infer<typeof sectionSchema>>[]) => {
+      if (rows.length === 0) return;
+      const idsToDelete = new Set(rows.map((r) => r.original.id));
+      setData((prev) => prev.filter((item) => !idsToDelete.has(item.id)));
+      table.resetRowSelection();
+    },
+    [table],
+  );
+
   const rowContextMenu = React.useCallback(
     ({
       row,
@@ -970,12 +1007,12 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     }) => {
       const url = row.original.url ?? row.original.target ?? "";
       const selectionCount = selectedRows.length;
+      const targets = selectionCount > 0 ? selectedRows : [row];
       return (
         <>
           <ContextMenuItem
             disabled={!url}
-            onSelect={(event) => {
-              event.preventDefault();
+            onSelect={() => {
               if (!url) return;
               window.open(url, "_blank", "noopener,noreferrer");
             }}
@@ -983,19 +1020,13 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             <ExternalLink className="size-4 text-muted-foreground" />
             Open URL
           </ContextMenuItem>
-          <ContextMenuItem
-            onSelect={(event) => {
-              event.preventDefault();
-              writeToClipboard(String(row.original.id));
-            }}
-          >
+          <ContextMenuItem onSelect={() => writeToClipboard(String(row.original.id))}>
             <Copy className="size-4 text-muted-foreground" />
             Copy ID
           </ContextMenuItem>
           <ContextMenuItem
             disabled={!url}
-            onSelect={(event) => {
-              event.preventDefault();
+            onSelect={() => {
               if (!url) return;
               writeToClipboard(url);
             }}
@@ -1004,19 +1035,20 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             Copy URL
           </ContextMenuItem>
           <ContextMenuSeparator />
-          <ContextMenuItem
-            disabled={selectionCount === 0}
-            onSelect={(_event) => {
-              tableInstance.resetRowSelection();
-            }}
-          >
+          <ContextMenuItem disabled={selectionCount === 0} onSelect={() => tableInstance.resetRowSelection()}>
             <XIcon className="size-4 text-muted-foreground" />
             Clear selection
+            <ContextMenuShortcut>Esc</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem variant="destructive" onSelect={() => handleDeleteRows(targets)}>
+            <Trash2 className="size-4" />
+            Delete{targets.length > 1 ? ` (${targets.length})` : ""}
+            <ContextMenuShortcut>⌫</ContextMenuShortcut>
           </ContextMenuItem>
         </>
       );
     },
-    [writeToClipboard],
+    [writeToClipboard, handleDeleteRows],
   );
 
   const appliedColumnFilters = React.useMemo(() => {
@@ -1086,6 +1118,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                     setData={setData}
                     rowDensity={rowDensity}
                     rowContextMenu={rowContextMenu}
+                    onDeleteRows={handleDeleteRows}
                   />
                 </div>
               </div>
