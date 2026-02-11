@@ -314,43 +314,22 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
       const shouldUnpin = pinnedCount > targets.length / 2;
       return (
         <>
-          <ContextMenuItem
-            onSelect={(event) => {
-              event.preventDefault();
-              togglePinned(targetIds);
-            }}
-          >
+          <ContextMenuItem onSelect={() => togglePinned(targetIds)}>
             <Pin className="size-4 text-muted-foreground" />
             {shouldUnpin ? "Unpin" : "Pin"}
             {targets.length > 1 ? ` (${targets.length})` : ""}
           </ContextMenuItem>
-          <ContextMenuItem
-            onSelect={(event) => {
-              event.preventDefault();
-              handleClone(targets);
-            }}
-          >
+          <ContextMenuItem onSelect={() => handleClone(targets)}>
             <Copy className="size-4 text-muted-foreground" />
             Clone{targets.length > 1 ? ` (${targets.length})` : ""}
           </ContextMenuItem>
           <ContextMenuSeparator />
-          <ContextMenuItem
-            onSelect={(event) => {
-              event.preventDefault();
-              table.resetRowSelection();
-            }}
-          >
+          <ContextMenuItem onSelect={() => table.resetRowSelection()}>
             <X className="size-4 text-muted-foreground" />
             Clear selection
             <ContextMenuShortcut>Esc</ContextMenuShortcut>
           </ContextMenuItem>
-          <ContextMenuItem
-            variant="destructive"
-            onSelect={(event) => {
-              event.preventDefault();
-              handleDelete(targets);
-            }}
-          >
+          <ContextMenuItem variant="destructive" onSelect={() => handleDelete(targets)}>
             <Trash2 className="size-4" />
             Delete{targets.length > 1 ? ` (${targets.length})` : ""}
             <ContextMenuShortcut>⌫</ContextMenuShortcut>
