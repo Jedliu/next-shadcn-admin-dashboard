@@ -25,7 +25,7 @@ export function QuickCreateInset({ children }: { readonly children: React.ReactN
     <div className="flex flex-1 min-h-0 gap-4 overflow-hidden p-4 md:p-6 [html[data-theme-preset=brutalist]_&]:overflow-x-visible [html[data-theme-preset=brutalist]_&]:overflow-y-hidden">
       {open && pinned && (
         <aside className="hidden shrink-0 lg:block" style={{ width: `${panelWidth}px` }}>
-          <section className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
+          <section className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-background">
             <div
               aria-hidden="true"
               title="Resize"
