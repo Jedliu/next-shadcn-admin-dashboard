@@ -4,7 +4,18 @@
 import * as React from "react";
 
 import type { ColumnDef, Row, Table } from "@tanstack/react-table";
-import { Copy, ExternalLink, GripVerticalIcon, ListFilterPlus, Plus, Search, Trash2, XIcon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronsUpDownIcon,
+  Copy,
+  ExternalLink,
+  GripVerticalIcon,
+  ListFilterPlus,
+  Plus,
+  Search,
+  Trash2,
+  XIcon,
+} from "lucide-react";
 import { createPortal } from "react-dom";
 import type { z } from "zod";
 
@@ -13,6 +24,7 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ContextMenuItem, ContextMenuSeparator, ContextMenuShortcut } from "@/components/ui/context-menu";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Field, FieldLabel, FieldTitle } from "@/components/ui/field";
@@ -202,13 +214,34 @@ type FacetFilters = {
 };
 
 type FilterFieldKey = keyof FacetFilters;
-type FilterOperator = "in" | "notIn";
+
+// Column types for determining available operators
+type ColumnType = "string" | "number" | "boolean" | "enum";
+
+// Filter operators based on the image
+type FilterOperator =
+  | "contains"
+  | "notContains"
+  | "startsWith"
+  | "endsWith"
+  | "equals"
+  | "notEquals"
+  | "lt"
+  | "gte"
+  | "matchWildcard"
+  | "notMatchWildcard"
+  | "matchRegex"
+  | "notMatchRegex"
+  | "in"
+  | "notIn";
+
 type FilterGroupJoin = "all" | "any";
 
 type FilterCondition = {
   id: string;
-  field: FilterFieldKey | null;
+  field: string | null;
   operator: FilterOperator;
+  value: string;
   values: string[];
 };
 
@@ -221,6 +254,65 @@ type FilterGroup = {
   conditions: FilterCondition[];
 };
 
+// Column definitions for filter
+type FilterColumnDef = {
+  key: string;
+  label: string;
+  type: ColumnType;
+  options?: Array<{ label: string; value: string }>;
+};
+
+// Operators grouped by type
+const STRING_OPERATORS: Array<{ key: FilterOperator; label: string }> = [
+  { key: "contains", label: "Contains" },
+  { key: "notContains", label: "Not Contains" },
+  { key: "startsWith", label: "Start With" },
+  { key: "endsWith", label: "End With" },
+  { key: "equals", label: "Equal" },
+  { key: "notEquals", label: "Not Equal" },
+  { key: "matchWildcard", label: "Match Wildcard" },
+  { key: "notMatchWildcard", label: "Not Match Wildcard" },
+  { key: "matchRegex", label: "Match Regex" },
+  { key: "notMatchRegex", label: "Not Match Regex" },
+];
+
+const NUMBER_OPERATORS: Array<{ key: FilterOperator; label: string }> = [
+  { key: "equals", label: "Equal" },
+  { key: "notEquals", label: "Not Equal" },
+  { key: "lt", label: "<" },
+  { key: "gte", label: ">=" },
+];
+
+const ENUM_OPERATORS: Array<{ key: FilterOperator; label: string }> = [
+  { key: "in", label: "Is any of" },
+  { key: "notIn", label: "Is none of" },
+];
+
+const BOOLEAN_OPERATORS: Array<{ key: FilterOperator; label: string }> = [
+  { key: "equals", label: "Equal" },
+  { key: "notEquals", label: "Not Equal" },
+];
+
+function getOperatorsForType(type: ColumnType): Array<{ key: FilterOperator; label: string }> {
+  switch (type) {
+    case "string":
+      return STRING_OPERATORS;
+    case "number":
+      return NUMBER_OPERATORS;
+    case "enum":
+      return ENUM_OPERATORS;
+    case "boolean":
+      return BOOLEAN_OPERATORS;
+    default:
+      return STRING_OPERATORS;
+  }
+}
+
+// Check if operator requires multi-select (enum type)
+function isMultiSelectOperator(operator: FilterOperator): boolean {
+  return operator === "in" || operator === "notIn";
+}
+
 const CLIENT_OPTIONS = [
   { label: "Eddie Lake", value: "Eddie Lake" },
   { label: "Jamik Tashpulatov", value: "Jamik Tashpulatov" },
@@ -230,6 +322,70 @@ const CLIENT_OPTIONS = [
 
 const HOST_OPTIONS = [{ label: "api.studio-admin.dev", value: "api.studio-admin.dev" }] as const;
 
+const METHOD_OPTIONS = [
+  { label: "GET", value: "GET" },
+  { label: "POST", value: "POST" },
+  { label: "PUT", value: "PUT" },
+  { label: "DELETE", value: "DELETE" },
+  { label: "PATCH", value: "PATCH" },
+] as const;
+
+const STATUS_OPTIONS = [
+  { label: "Done", value: "Done" },
+  { label: "In Process", value: "In Process" },
+] as const;
+
+const FORMAT_OPTIONS = [
+  { label: "JSON", value: "JSON" },
+  { label: "XML", value: "XML" },
+  { label: "Text", value: "Text" },
+  { label: "HTML", value: "HTML" },
+  { label: "JS", value: "JS" },
+  { label: "CSS", value: "CSS" },
+  { label: "Image", value: "Image" },
+  { label: "Media", value: "Media" },
+  { label: "Binary", value: "Binary" },
+] as const;
+
+const STATUS_GROUP_OPTIONS = [
+  { label: "1xx", value: "1xx" },
+  { label: "2xx", value: "2xx" },
+  { label: "3xx", value: "3xx" },
+  { label: "4xx", value: "4xx" },
+  { label: "5xx", value: "5xx" },
+] as const;
+
+const BOOLEAN_OPTIONS = [
+  { label: "Yes", value: "true" },
+  { label: "No", value: "false" },
+] as const;
+
+// Filter column definitions based on table columns
+const FILTER_COLUMN_DEFS: FilterColumnDef[] = [
+  { key: "id", label: "ID", type: "number" },
+  { key: "url", label: "URL", type: "string" },
+  { key: "host", label: "Host", type: "enum", options: [...HOST_OPTIONS] },
+  { key: "path", label: "Path", type: "string" },
+  { key: "query", label: "Query", type: "string" },
+  { key: "client", label: "Client", type: "enum", options: [...CLIENT_OPTIONS] },
+  { key: "method", label: "Method", type: "enum", options: [...METHOD_OPTIONS] },
+  { key: "status", label: "Status", type: "enum", options: [...STATUS_OPTIONS] },
+  { key: "code", label: "Code", type: "number" },
+  { key: "statusGroup", label: "Status Group", type: "enum", options: [...STATUS_GROUP_OPTIONS] },
+  { key: "format", label: "Format", type: "enum", options: [...FORMAT_OPTIONS] },
+  { key: "date", label: "Date", type: "string" },
+  { key: "time", label: "Time", type: "string" },
+  { key: "duration", label: "Duration", type: "number" },
+  { key: "latency", label: "Latency", type: "number" },
+  { key: "requestBodySize", label: "Request Body Size", type: "number" },
+  { key: "responseBodySize", label: "Response Body Size", type: "number" },
+  { key: "serverIpAddress", label: "Server IP Address", type: "string" },
+  { key: "ssl", label: "SSL", type: "boolean", options: [...BOOLEAN_OPTIONS] },
+  { key: "edited", label: "Edited", type: "boolean", options: [...BOOLEAN_OPTIONS] },
+  { key: "comment", label: "Comment", type: "string" },
+];
+
+// Keep old FILTER_FIELD_DEFS for backward compatibility with facet filters
 const FILTER_FIELD_DEFS: Array<{
   key: FilterFieldKey;
   label: string;
@@ -248,28 +404,12 @@ const FILTER_FIELD_DEFS: Array<{
   {
     key: "format",
     label: "Format",
-    options: [
-      { label: "JSON", value: "JSON" },
-      { label: "XML", value: "XML" },
-      { label: "Text", value: "Text" },
-      { label: "HTML", value: "HTML" },
-      { label: "JS", value: "JS" },
-      { label: "CSS", value: "CSS" },
-      { label: "Image", value: "Image" },
-      { label: "Media", value: "Media" },
-      { label: "Binary", value: "Binary" },
-    ],
+    options: [...FORMAT_OPTIONS],
   },
   {
     key: "statusGroup",
     label: "Status",
-    options: [
-      { label: "1xx", value: "1xx" },
-      { label: "2xx", value: "2xx" },
-      { label: "3xx", value: "3xx" },
-      { label: "4xx", value: "4xx" },
-      { label: "5xx", value: "5xx" },
-    ],
+    options: [...STATUS_GROUP_OPTIONS],
   },
 ];
 
@@ -280,7 +420,7 @@ function newId(prefix: string) {
 }
 
 function createEmptyCondition(): FilterCondition {
-  return { id: newId("cond"), field: null, operator: "in", values: [] };
+  return { id: newId("cond"), field: null, operator: "contains", value: "", values: [] };
 }
 
 function createEmptyGroup(join: FilterGroupJoin = "all"): FilterGroup {
@@ -304,8 +444,133 @@ function deriveFacetFilters(groups: FilterGroup[]): FacetFilters {
 
 function countActiveConditions(groups: FilterGroup[]) {
   return groups.reduce(
-    (acc, group) => acc + group.conditions.filter((c) => Boolean(c.field) && c.values.length > 0).length,
+    (acc, group) =>
+      acc +
+      group.conditions.filter((c) => Boolean(c.field) && ((c.value ?? "").trim() !== "" || c.values.length > 0)).length,
     0,
+  );
+}
+
+function FieldCombobox({
+  value,
+  options,
+  placeholder,
+  onChange,
+  className,
+}: {
+  value: string | null;
+  options: Array<{ key: string; label: string }>;
+  placeholder?: string;
+  onChange: (value: string) => void;
+  className?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const selectedOption = options.find((opt) => opt.key === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "bg-background hover:bg-background border-input justify-between px-3 font-normal outline-offset-0 outline-none focus-visible:outline-[3px]",
+            className,
+          )}
+        >
+          {selectedOption ? (
+            <span className="truncate">{selectedOption.label}</span>
+          ) : (
+            <span className="text-muted-foreground">{placeholder ?? "Select..."}</span>
+          )}
+          <ChevronsUpDownIcon className="text-muted-foreground/80 size-4 shrink-0" aria-hidden="true" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="border-input w-full min-w-[var(--radix-popper-anchor-width)] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.key}
+                  value={opt.key}
+                  onSelect={(currentValue) => {
+                    onChange(currentValue);
+                    setOpen(false);
+                  }}
+                >
+                  {opt.label}
+                  {value === opt.key && <CheckIcon className="ml-auto size-4" />}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function OperatorCombobox({
+  value,
+  columnType,
+  onChange,
+  className,
+}: {
+  value: FilterOperator;
+  columnType: ColumnType;
+  onChange: (value: FilterOperator) => void;
+  className?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const operators = getOperatorsForType(columnType);
+  const selectedOperator = operators.find((op) => op.key === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "bg-background hover:bg-background border-input justify-between px-3 font-normal outline-offset-0 outline-none focus-visible:outline-[3px]",
+            className,
+          )}
+        >
+          {selectedOperator ? (
+            <span className="truncate">{selectedOperator.label}</span>
+          ) : (
+            <span className="text-muted-foreground">Operator</span>
+          )}
+          <ChevronsUpDownIcon className="text-muted-foreground/80 size-4 shrink-0" aria-hidden="true" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="border-input w-full min-w-[var(--radix-popper-anchor-width)] p-0" align="start">
+        <Command>
+          <CommandList>
+            <CommandGroup>
+              {operators.map((op) => (
+                <CommandItem
+                  key={op.key}
+                  value={op.key}
+                  onSelect={(currentValue) => {
+                    onChange(currentValue as FilterOperator);
+                    setOpen(false);
+                  }}
+                >
+                  {op.label}
+                  {value === op.key && <CheckIcon className="ml-auto size-4" />}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -337,35 +602,48 @@ function ValuesPicker({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" side="bottom" sideOffset={8} className="w-72 p-2">
-        <div className="flex max-h-64 flex-col gap-1 overflow-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {options.map((opt) => {
-            const checked = selected.has(opt.value);
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-                onClick={() => {
-                  if (checked) {
-                    onChange(values.filter((v) => v !== opt.value));
-                    return;
-                  }
-                  onChange([...values, opt.value]);
-                }}
-              >
-                <Checkbox checked={checked} />
-                <span className="min-w-0 flex-1 truncate">{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      <PopoverContent
+        align="start"
+        side="bottom"
+        sideOffset={8}
+        className="border-input w-full min-w-[var(--radix-popper-anchor-width)] p-0"
+      >
+        <Command>
+          <CommandInput placeholder="Search..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((opt) => {
+                const checked = selected.has(opt.value);
+                return (
+                  <CommandItem
+                    key={opt.value}
+                    value={opt.value}
+                    onSelect={() => {
+                      if (checked) {
+                        onChange(values.filter((v) => v !== opt.value));
+                        return;
+                      }
+                      onChange([...values, opt.value]);
+                    }}
+                  >
+                    <Checkbox checked={checked} tabIndex={-1} className="[&_svg]:!text-primary-foreground" />
+                    {opt.label}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
         {values.length > 0 ? (
-          <div className="mt-2 flex items-center justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
-              Clear
-            </Button>
-          </div>
+          <>
+            <div className="h-px bg-border" />
+            <div className="p-1">
+              <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onChange([])}>
+                Clear
+              </Button>
+            </div>
+          </>
         ) : null}
       </PopoverContent>
     </Popover>
@@ -477,9 +755,11 @@ function FiltersBuilder({
 
                           <div className={group.conditions.length > 1 ? "grid min-w-0 pl-16" : "grid min-w-0"}>
                             {group.conditions.map((cond, conditionIndex) => {
-                              const fieldDef = cond.field
-                                ? (FILTER_FIELD_DEFS.find((f) => f.key === cond.field) ?? null)
+                              const columnDef = cond.field
+                                ? (FILTER_COLUMN_DEFS.find((f) => f.key === cond.field) ?? null)
                                 : null;
+                              const columnType = columnDef?.type ?? "string";
+                              const showMultiSelect = isMultiSelectOperator(cond.operator) && columnDef?.options;
                               return (
                                 <div key={cond.id} className="relative min-w-0">
                                   {group.conditions.length > 1 ? (
@@ -492,9 +772,16 @@ function FiltersBuilder({
 
                                   <div className="flex w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-md bg-background">
                                     <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto px-2 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                                      <Select
-                                        value={cond.field ?? ""}
-                                        onValueChange={(value) => {
+                                      <FieldCombobox
+                                        value={cond.field}
+                                        options={FILTER_COLUMN_DEFS}
+                                        placeholder="Field"
+                                        className="h-8 w-[10.5rem]"
+                                        onChange={(value) => {
+                                          const newColumnDef = FILTER_COLUMN_DEFS.find((f) => f.key === value);
+                                          const newType = newColumnDef?.type ?? "string";
+                                          const operators = getOperatorsForType(newType);
+                                          const defaultOperator = operators[0]?.key ?? "contains";
                                           onChange(
                                             groups.map((g) =>
                                               g.id !== group.id
@@ -503,73 +790,84 @@ function FiltersBuilder({
                                                     ...g,
                                                     conditions: g.conditions.map((c) =>
                                                       c.id === cond.id
-                                                        ? { ...c, field: value as FilterFieldKey, values: [] }
+                                                        ? {
+                                                            ...c,
+                                                            field: value,
+                                                            operator: defaultOperator,
+                                                            value: "",
+                                                            values: [],
+                                                          }
                                                         : c,
-                                                    ),
-                                                  },
-                                            ),
-                                          );
-                                        }}
-                                      >
-                                        <SelectTrigger className="h-8 w-[10.5rem]">
-                                          <SelectValue placeholder="Field" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {FILTER_FIELD_DEFS.map((f) => (
-                                            <SelectItem key={f.key} value={f.key}>
-                                              {f.label}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-
-                                      <Select
-                                        value={cond.operator}
-                                        onValueChange={(value) => {
-                                          onChange(
-                                            groups.map((g) =>
-                                              g.id !== group.id
-                                                ? g
-                                                : {
-                                                    ...g,
-                                                    conditions: g.conditions.map((c) =>
-                                                      c.id === cond.id
-                                                        ? { ...c, operator: value as FilterOperator }
-                                                        : c,
-                                                    ),
-                                                  },
-                                            ),
-                                          );
-                                        }}
-                                      >
-                                        <SelectTrigger className="h-8 w-[9rem]">
-                                          <SelectValue placeholder="Operator" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="in">is any of</SelectItem>
-                                          <SelectItem value="notIn">is none of</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-
-                                      <ValuesPicker
-                                        disabled={!cond.field}
-                                        options={fieldDef?.options ?? []}
-                                        values={cond.values}
-                                        onChange={(nextValues) => {
-                                          onChange(
-                                            groups.map((g) =>
-                                              g.id !== group.id
-                                                ? g
-                                                : {
-                                                    ...g,
-                                                    conditions: g.conditions.map((c) =>
-                                                      c.id === cond.id ? { ...c, values: nextValues } : c,
                                                     ),
                                                   },
                                             ),
                                           );
                                         }}
                                       />
+
+                                      <OperatorCombobox
+                                        value={cond.operator}
+                                        columnType={columnType}
+                                        className="h-8 w-[9rem]"
+                                        onChange={(value) => {
+                                          onChange(
+                                            groups.map((g) =>
+                                              g.id !== group.id
+                                                ? g
+                                                : {
+                                                    ...g,
+                                                    conditions: g.conditions.map((c) =>
+                                                      c.id === cond.id
+                                                        ? { ...c, operator: value, value: "", values: [] }
+                                                        : c,
+                                                    ),
+                                                  },
+                                            ),
+                                          );
+                                        }}
+                                      />
+
+                                      {showMultiSelect ? (
+                                        <ValuesPicker
+                                          disabled={!cond.field}
+                                          options={columnDef?.options ?? []}
+                                          values={cond.values}
+                                          onChange={(nextValues) => {
+                                            onChange(
+                                              groups.map((g) =>
+                                                g.id !== group.id
+                                                  ? g
+                                                  : {
+                                                      ...g,
+                                                      conditions: g.conditions.map((c) =>
+                                                        c.id === cond.id ? { ...c, values: nextValues } : c,
+                                                      ),
+                                                    },
+                                              ),
+                                            );
+                                          }}
+                                        />
+                                      ) : (
+                                        <Input
+                                          value={cond.value}
+                                          onChange={(e) => {
+                                            onChange(
+                                              groups.map((g) =>
+                                                g.id !== group.id
+                                                  ? g
+                                                  : {
+                                                      ...g,
+                                                      conditions: g.conditions.map((c) =>
+                                                        c.id === cond.id ? { ...c, value: e.target.value } : c,
+                                                      ),
+                                                    },
+                                              ),
+                                            );
+                                          }}
+                                          placeholder="Value..."
+                                          className="h-8 min-w-0 flex-1"
+                                        />
+                                      )}
                                     </div>
 
                                     <div className="flex shrink-0 items-center">
