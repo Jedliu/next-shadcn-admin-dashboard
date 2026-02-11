@@ -65,7 +65,7 @@ export function DeleteConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent size="sm">
+      <AlertDialogContent size="md">
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
             <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
@@ -74,7 +74,7 @@ export function DeleteConfirmDialog({
             <AlertDialogTitle>{displayTitle ?? defaultTitle}</AlertDialogTitle>
           </div>
           <AlertDialogDescription>
-            This action cannot be undone! {displayDescription ?? defaultDescription}
+            {displayDescription ?? `${defaultDescription} This action cannot be undone!`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

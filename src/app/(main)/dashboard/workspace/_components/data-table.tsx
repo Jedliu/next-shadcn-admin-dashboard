@@ -1481,7 +1481,7 @@ function FiltersBuilder({
             title="Delete Saved Filter"
             description={
               deleteTarget
-                ? `Are you sure you want to delete the saved filter "${deleteTarget.name}"? This action cannot be undone.`
+                ? `Are you sure you want to delete the saved filter "${deleteTarget.name}"? This action cannot be undone!`
                 : undefined
             }
           />
