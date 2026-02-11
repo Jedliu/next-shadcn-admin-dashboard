@@ -9,7 +9,6 @@ import { createPortal } from "react-dom";
 import type { z } from "zod";
 
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
-import { SelectionActionBar } from "@/components/data-table/selection-action-bar";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -447,7 +446,7 @@ function FiltersBuilder({
                   ) : null}
 
                   <div className="rounded-lg border bg-muted/20 p-2">
-                    <div className="mt-1.5">
+                    <div className="mt-1">
                       {group.conditions.length === 0 ? (
                         <div className="text-muted-foreground text-sm">No conditions yet.</div>
                       ) : (
@@ -491,8 +490,8 @@ function FiltersBuilder({
                                     ) : null
                                   ) : null}
 
-                                  <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-md bg-background">
-                                    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-2 py-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                  <div className="flex w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-md bg-background">
+                                    <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto px-2 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                       <Select
                                         value={cond.field ?? ""}
                                         onValueChange={(value) => {
@@ -980,7 +979,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
   );
   const hasAnyFilters = totalSelectedFilters > 0;
   const showFiltered = hasAnyFilters && filtersEnabled;
-  const selectedCount = table.getFilteredSelectedRowModel().rows.length;
 
   const writeToClipboard = React.useCallback((value: string) => {
     if (!value) return;
@@ -1195,7 +1193,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
             </TabsList>
           </div>
           <div className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 flex-1 items-center overflow-x-auto p-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex min-w-0 flex-1 items-center overflow-x-auto p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="flex flex-nowrap items-center gap-2">
                 <div className="relative w-56 shrink-0">
                   <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 size-4 text-muted-foreground" />
@@ -1347,13 +1345,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                 showHeader={false}
               />
             </FiltersPanelDrawer>
-            <SelectionActionBar
-              count={selectedCount}
-              actions={[
-                { label: "Save as", icon: Copy },
-                { label: "Delete", icon: Trash2 },
-              ]}
-            />
             <DeleteConfirmDialog
               open={deleteTargets.length > 0}
               onOpenChange={(open) => !open && setDeleteTargets([])}
