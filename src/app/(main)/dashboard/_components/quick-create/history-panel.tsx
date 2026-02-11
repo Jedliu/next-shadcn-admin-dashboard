@@ -2,20 +2,11 @@
 
 import * as React from "react";
 
-import { Clock, Copy, Database, Hand, OctagonAlert, Pin, Search, Trash2, X, Zap } from "lucide-react";
+import { Clock, Copy, Database, Hand, Pin, Search, Trash2, X, Zap } from "lucide-react";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ContextMenuItem, ContextMenuSeparator, ContextMenuShortcut } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
@@ -386,28 +377,14 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
         )}
       </div>
 
-      <AlertDialog open={deleteTargets.length > 0} onOpenChange={(open) => !open && setDeleteTargets([])}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10">
-                <OctagonAlert className="h-5 w-5 text-destructive" />
-              </div>
-              {deleteTargets.length > 1 ? "Delete history items?" : "Delete history item?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-[15px]">
-              This action cannot be undone.{" "}
-              {deleteTargets.length > 1
-                ? `This will delete ${deleteTargets.length} records permanently.`
-                : `This will delete "${deleteTargets[0]?.title}" permanently.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteTargets.length > 0}
+        onOpenChange={(open) => !open && setDeleteTargets([])}
+        onConfirm={confirmDelete}
+        title={deleteTargets.length > 1 ? "Delete history items?" : "Delete history item?"}
+        itemCount={deleteTargets.length}
+        itemLabel={deleteTargets.length === 1 ? deleteTargets[0]?.title : undefined}
+      />
     </div>
   );
 }

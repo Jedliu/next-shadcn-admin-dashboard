@@ -10,17 +10,7 @@ import type { z } from "zod";
 
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
 import { SelectionActionBar } from "@/components/data-table/selection-action-bar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1364,30 +1354,13 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                 { label: "Delete", icon: Trash2 },
               ]}
             />
-            <AlertDialog open={deleteTargets.length > 0} onOpenChange={(open) => !open && setDeleteTargets([])}>
-              <AlertDialogContent size="sm">
-                <AlertDialogHeader>
-                  <div className="flex items-center gap-3">
-                    <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
-                      <Trash2 />
-                    </AlertDialogMedia>
-                    <AlertDialogTitle>{deleteTargets.length > 1 ? "Delete items?" : "Delete item?"}</AlertDialogTitle>
-                  </div>
-                  <AlertDialogDescription>
-                    This action cannot be undone!{" "}
-                    {deleteTargets.length > 1
-                      ? `This will delete ${deleteTargets.length} records permanently.`
-                      : `This will delete ID "${deleteTargets[0]?.id}" permanently.`}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
-                  <AlertDialogAction variant="destructive" onClick={confirmDelete}>
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <DeleteConfirmDialog
+              open={deleteTargets.length > 0}
+              onOpenChange={(open) => !open && setDeleteTargets([])}
+              onConfirm={confirmDelete}
+              itemCount={deleteTargets.length}
+              itemLabel={deleteTargets.length === 1 ? `ID "${deleteTargets[0]?.id}"` : undefined}
+            />
           </>
         )}
       </div>
