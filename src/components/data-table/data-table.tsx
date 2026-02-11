@@ -48,7 +48,7 @@ interface DataTableProps<TData, TValue> {
 
 export function DataTable<TData, TValue>({
   table,
-  columns,
+  columns: _columns,
   dndEnabled = false,
   onReorder,
   density = "normal",
@@ -80,6 +80,8 @@ export function DataTable<TData, TValue>({
   const keyboardRootRef = React.useRef<HTMLDivElement | null>(null);
   const keyboardFocusRef = React.useRef<HTMLButtonElement | null>(null);
   const [maxFillRows, setMaxFillRows] = React.useState(0);
+  const [firstRowHeight, setFirstRowHeight] = React.useState<number | null>(null);
+  const firstRowRef = React.useRef<HTMLTableRowElement | null>(null);
   const lastRowsFitRef = React.useRef(0);
   const resizeRafRef = React.useRef<number | null>(null);
 
@@ -294,19 +296,62 @@ export function DataTable<TData, TValue>({
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const rows = table.getRowModel().rows;
   const visibleColumnCount = table.getVisibleLeafColumns().length;
-  const emptyRowHeightClass = density === "compact" ? "h-8" : density === "comfortable" ? "h-12" : "h-10";
-  const rowHeightPx = density === "compact" ? 32 : density === "comfortable" ? 48 : 40;
-  const headerHeightPx = rowHeightPx;
+  const defaultRowHeight = density === "compact" ? 32 : density === "comfortable" ? 48 : 40;
+  const rowHeightPx = firstRowHeight ?? defaultRowHeight;
+  const headerHeightPx = defaultRowHeight;
   const emptyRowCount = fillEmptyRows && rows.length > 0 ? Math.max(maxFillRows - rows.length, 0) : 0;
+  const fillContainerRef = React.useRef<HTMLElement | null>(null);
 
+  // Measure first row height
+  React.useLayoutEffect(() => {
+    if (!fillEmptyRows) return;
+    const measureHeight = () => {
+      if (firstRowRef.current) {
+        const height = firstRowRef.current.getBoundingClientRect().height;
+        if (height > 0 && height !== firstRowHeight) {
+          setFirstRowHeight(height);
+        }
+      }
+    };
+    measureHeight();
+  }, [fillEmptyRows, firstRowHeight]);
+
+  // Observe first row resize
+  React.useEffect(() => {
+    if (!fillEmptyRows || !firstRowRef.current) return;
+    if (typeof ResizeObserver === "undefined") return;
+    const measureHeight = () => {
+      if (firstRowRef.current) {
+        const height = firstRowRef.current.getBoundingClientRect().height;
+        if (height > 0 && height !== firstRowHeight) {
+          setFirstRowHeight(height);
+        }
+      }
+    };
+    const observer = new ResizeObserver(measureHeight);
+    observer.observe(firstRowRef.current);
+    return () => observer.disconnect();
+  }, [fillEmptyRows, firstRowHeight]);
+
+  // Find and cache the scrollable container
+  React.useLayoutEffect(() => {
+    if (!fillEmptyRows) return;
+    let container: HTMLElement | null = keyboardRootRef.current?.parentElement ?? null;
+    while (container && container.clientHeight === 0) {
+      container = container.parentElement;
+    }
+    fillContainerRef.current = container;
+  }, [fillEmptyRows]);
+
+  // Compute max fill rows based on container height and row height
   React.useEffect(() => {
     if (!fillEmptyRows) return;
-    const parent = keyboardRootRef.current?.parentElement;
-    if (!parent) return;
+    const container = fillContainerRef.current;
+    if (!container) return;
     const maxRowsCap = 60;
 
     const computeRows = () => {
-      const height = parent.clientHeight;
+      const height = container.clientHeight;
       const available = Math.max(height - headerHeightPx, 0);
       const rowsFit = Math.min(Math.floor(available / rowHeightPx), maxRowsCap);
       if (rowsFit !== lastRowsFitRef.current) {
@@ -329,7 +374,7 @@ export function DataTable<TData, TValue>({
 
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(() => scheduleCompute());
-    observer.observe(parent);
+    observer.observe(container);
     return () => {
       observer.disconnect();
       if (resizeRafRef.current !== null) {
@@ -339,7 +384,8 @@ export function DataTable<TData, TValue>({
     };
   }, [fillEmptyRows, headerHeightPx, rowHeightPx]);
 
-  const renderRow = (row: Row<TData>) => {
+  const renderRow = (row: Row<TData>, index: number) => {
+    const isFirstRow = index === 0;
     const rowProps = {
       onPointerDown: (event: React.PointerEvent<HTMLTableRowElement>) => handleRowPointerDown(event, row),
       onPointerEnter: (event: React.PointerEvent<HTMLTableRowElement>) => handleRowPointerEnter(event, row),
@@ -356,9 +402,15 @@ export function DataTable<TData, TValue>({
     };
 
     const rowElement = dndEnabled ? (
-      <DraggableRow row={row} data-selected={row.getIsSelected() || undefined} {...rowProps} />
+      <DraggableRow
+        ref={isFirstRow && fillEmptyRows ? firstRowRef : undefined}
+        row={row}
+        data-selected={row.getIsSelected() || undefined}
+        {...rowProps}
+      />
     ) : (
       <TableRow
+        ref={isFirstRow && fillEmptyRows ? firstRowRef : undefined}
         data-state={row.getIsSelected() && "selected"}
         data-selected={row.getIsSelected() || undefined}
         {...rowProps}
@@ -468,22 +520,22 @@ export function DataTable<TData, TValue>({
             </TableRow>
           ) : dndEnabled ? (
             <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
-              {rows.map((row) => renderRow(row))}
+              {rows.map((row, index) => renderRow(row, index))}
               {emptyRowCount > 0
                 ? Array.from({ length: emptyRowCount }, (_, index) => (
                     <TableRow key={`empty-${index}`} aria-hidden className="pointer-events-none">
-                      <TableCell colSpan={visibleColumnCount} className={emptyRowHeightClass} />
+                      <TableCell colSpan={visibleColumnCount} style={{ height: rowHeightPx }} />
                     </TableRow>
                   ))
                 : null}
             </SortableContext>
           ) : (
             <>
-              {rows.map((row) => renderRow(row))}
+              {rows.map((row, index) => renderRow(row, index))}
               {emptyRowCount > 0
                 ? Array.from({ length: emptyRowCount }, (_, index) => (
                     <TableRow key={`empty-${index}`} aria-hidden className="pointer-events-none">
-                      <TableCell colSpan={visibleColumnCount} className={emptyRowHeightClass} />
+                      <TableCell colSpan={visibleColumnCount} style={{ height: rowHeightPx }} />
                     </TableRow>
                   ))
                 : null}

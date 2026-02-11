@@ -390,17 +390,15 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
 
       <div ref={tableRef} className="min-h-0 flex-1 overflow-y-auto">
         {visibleItems.length ? (
-          <div className="min-h-0 flex-1">
-            <DataTable
-              table={table}
-              columns={columns}
-              density="compact"
-              rowContextMenu={rowContextMenu}
-              enableKeyboardSelection
-              fillEmptyRows
-              className="w-full [&_thead_tr]:border-transparent"
-            />
-          </div>
+          <DataTable
+            table={table}
+            columns={columns}
+            density="compact"
+            rowContextMenu={rowContextMenu}
+            enableKeyboardSelection
+            fillEmptyRows
+            className="w-full [&_thead_tr]:border-transparent"
+          />
         ) : (
           <div className="flex flex-col items-center justify-center gap-2 p-8 text-center">
             <div className="font-medium text-sm">No history found</div>
