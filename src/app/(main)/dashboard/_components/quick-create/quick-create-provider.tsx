@@ -40,7 +40,7 @@ export function QuickCreateProvider({ children }: { readonly children: React.Rea
     panel: "quick-create",
   });
   const [pinned, setPinned] = React.useState(false);
-  const [panelWidth, setPanelWidth] = React.useState(352); // 22rem
+  const [panelWidth, setPanelWidth] = React.useState(410);
   const [testInputValue, setTestInputValue] = React.useState("");
   const [historyFilters, setHistoryFilters] = React.useState<Array<"manual" | "auto" | "pinned">>([]);
   const [historySearch, setHistorySearch] = React.useState("");

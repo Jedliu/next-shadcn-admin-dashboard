@@ -101,8 +101,8 @@ const seedHistory: HistoryItem[] = [
 ];
 
 function kindIcon(kind: HistoryKind) {
-  if (kind === "manual") return <Hand className="size-5 text-blue-600" />;
-  return <Zap className="size-5 text-amber-500" />;
+  if (kind === "manual") return <Hand className="size-4 text-blue-600" />;
+  return <Zap className="size-4 text-amber-500" />;
 }
 
 export function HistoryPanel({ className }: { readonly className?: string }) {
@@ -235,8 +235,8 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
           </div>
         ),
         enableSorting: false,
-        size: 320,
-        minSize: 200,
+        size: 235,
+        minSize: 150,
       },
       {
         accessorKey: "records",
