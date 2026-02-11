@@ -5,6 +5,7 @@ import {
   type ColumnDef,
   type ColumnFiltersState,
   type ColumnSizingState,
+  type FilterFn,
   getCoreRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
@@ -24,6 +25,7 @@ type UseDataTableInstanceProps<TData, TValue> = {
   defaultPageSize?: number;
   defaultColumnVisibility?: VisibilityState;
   getRowId?: (row: TData, index: number) => string;
+  globalFilterFn?: FilterFn<TData>;
 };
 
 export function useDataTableInstance<TData, TValue>({
@@ -34,6 +36,7 @@ export function useDataTableInstance<TData, TValue>({
   defaultPageSize,
   defaultColumnVisibility,
   getRowId,
+  globalFilterFn,
 }: UseDataTableInstanceProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(() => defaultColumnVisibility ?? {});
@@ -65,6 +68,7 @@ export function useDataTableInstance<TData, TValue>({
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     getRowId: getRowId ?? ((row) => (row as { id: string | number }).id.toString()),
+    globalFilterFn,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,

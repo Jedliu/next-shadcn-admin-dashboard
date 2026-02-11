@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, EllipsisVertical, Loader, Lock } from "lucide-react";
 import type { z } from "zod";
 
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,7 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-import { DataTableColumnHeader } from "../../../../../components/data-table/data-table-column-header";
 import type { sectionSchema } from "./schema";
 
 function formatMs(value?: number) {

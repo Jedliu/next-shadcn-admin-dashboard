@@ -5,13 +5,16 @@ import * as React from "react";
 
 import type { ColumnDef, Row, Table } from "@tanstack/react-table";
 import {
+  ArrowDownToLine,
   CheckIcon,
   ChevronsUpDownIcon,
   Copy,
   ExternalLink,
   GripVerticalIcon,
   ListFilterPlus,
+  Pencil,
   Plus,
+  Save,
   Search,
   Trash2,
   XIcon,
@@ -19,7 +22,10 @@ import {
 import { createPortal } from "react-dom";
 import type { z } from "zod";
 
+import { DataTable as DataTableNew } from "@/components/data-table/data-table";
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { withDndColumn } from "@/components/data-table/table-utils";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,9 +46,6 @@ import { usePointerResize } from "@/hooks/use-pointer-resize";
 import { clampPanelWidth } from "@/lib/panel-utils";
 import { cn } from "@/lib/utils";
 
-import { DataTable as DataTableNew } from "../../../../../components/data-table/data-table";
-import { DataTableViewOptions } from "../../../../../components/data-table/data-table-view-options";
-import { withDndColumn } from "../../../../../components/data-table/table-utils";
 import { dashboardColumns } from "./columns";
 import type { sectionSchema } from "./schema";
 import {
@@ -260,6 +263,14 @@ type FilterGroup = {
   conditions: FilterCondition[];
 };
 
+type SavedFilter = {
+  id: string;
+  name: string;
+  groups: FilterGroup[];
+  createdAt: number;
+  updatedAt: number;
+};
+
 // Column definitions for filter
 type FilterColumnDef = {
   key: string;
@@ -409,34 +420,6 @@ const FILTER_COLUMN_DEFS: FilterColumnDef[] = [
   { key: "comment", label: "Comment", type: "string" },
 ];
 
-// Keep old FILTER_FIELD_DEFS for backward compatibility with facet filters
-const FILTER_FIELD_DEFS: Array<{
-  key: FilterFieldKey;
-  label: string;
-  options: Array<{ label: string; value: string }>;
-}> = [
-  {
-    key: "client",
-    label: "Client",
-    options: [...CLIENT_OPTIONS],
-  },
-  {
-    key: "host",
-    label: "Host",
-    options: [...HOST_OPTIONS],
-  },
-  {
-    key: "format",
-    label: "Format",
-    options: [...FORMAT_OPTIONS],
-  },
-  {
-    key: "statusGroup",
-    label: "Status",
-    options: [...STATUS_GROUP_OPTIONS],
-  },
-];
-
 function newId(prefix: string) {
   // Stable enough for UI keys; avoids pulling in an id lib.
   const uuid = globalThis.crypto?.randomUUID?.();
@@ -478,6 +461,95 @@ function countActiveConditions(groups: FilterGroup[]) {
   );
 }
 
+function evaluateCondition(cond: FilterCondition, rowValue: unknown): boolean {
+  if (!cond.field) return true;
+  const str = String(rowValue ?? "");
+  const num = Number(rowValue);
+
+  switch (cond.operator) {
+    case "in":
+      return cond.values.length === 0 || cond.values.includes(str);
+    case "notIn":
+      return cond.values.length === 0 || !cond.values.includes(str);
+    case "contains":
+      return !cond.value || str.toLowerCase().includes(cond.value.toLowerCase());
+    case "notContains":
+      return !cond.value || !str.toLowerCase().includes(cond.value.toLowerCase());
+    case "startsWith":
+      return !cond.value || str.toLowerCase().startsWith(cond.value.toLowerCase());
+    case "endsWith":
+      return !cond.value || str.toLowerCase().endsWith(cond.value.toLowerCase());
+    case "equals":
+      return !cond.value || str === cond.value;
+    case "notEquals":
+      return !cond.value || str !== cond.value;
+    case "lt":
+      return !cond.value || num < Number(cond.value);
+    case "gte":
+      return !cond.value || num >= Number(cond.value);
+    case "matchWildcard": {
+      if (!cond.value) return true;
+      const pattern = cond.value
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*/g, ".*")
+        .replace(/\?/g, ".");
+      try {
+        return new RegExp(`^${pattern}$`, "i").test(str);
+      } catch {
+        return true;
+      }
+    }
+    case "notMatchWildcard": {
+      if (!cond.value) return true;
+      const pattern = cond.value
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*/g, ".*")
+        .replace(/\?/g, ".");
+      try {
+        return !new RegExp(`^${pattern}$`, "i").test(str);
+      } catch {
+        return true;
+      }
+    }
+    case "matchRegex":
+      if (!cond.value) return true;
+      try {
+        return new RegExp(cond.value, "i").test(str);
+      } catch {
+        return true;
+      }
+    case "notMatchRegex":
+      if (!cond.value) return true;
+      try {
+        return !new RegExp(cond.value, "i").test(str);
+      } catch {
+        return true;
+      }
+    default:
+      return true;
+  }
+}
+
+function evaluateFilterGroups(groups: FilterGroup[], row: Record<string, unknown>): boolean {
+  if (groups.length === 0) return true;
+  const groupJoin = groups[0]?.join ?? "all";
+
+  const groupResults = groups.map((group) => {
+    const activeConditions = group.conditions.filter(
+      (c) => c.field !== null && ((c.value ?? "").trim() !== "" || c.values.length > 0),
+    );
+    if (activeConditions.length === 0) return true;
+
+    if (group.conditionsJoin === "all") {
+      return activeConditions.every((c) => evaluateCondition(c, row[c.field as string]));
+    }
+    return activeConditions.some((c) => evaluateCondition(c, row[c.field as string]));
+  });
+
+  if (groupJoin === "all") return groupResults.every(Boolean);
+  return groupResults.some(Boolean);
+}
+
 function FieldCombobox({
   value,
   options,
@@ -502,7 +574,7 @@ function FieldCombobox({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "bg-background hover:bg-background border-input justify-between px-3 font-normal outline-offset-0 outline-none focus-visible:outline-[3px]",
+            "justify-between border-input bg-background px-3 font-normal outline-none outline-offset-0 hover:bg-background focus-visible:outline-[3px]",
             className,
           )}
         >
@@ -511,10 +583,10 @@ function FieldCombobox({
           ) : (
             <span className="text-muted-foreground">{placeholder ?? "Select..."}</span>
           )}
-          <ChevronsUpDownIcon className="text-muted-foreground/80 size-4 shrink-0" aria-hidden="true" />
+          <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground/80" aria-hidden="true" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="border-input w-full min-w-[var(--radix-popper-anchor-width)] p-0" align="start">
+      <PopoverContent className="w-full min-w-[var(--radix-popper-anchor-width)] border-input p-0" align="start">
         <Command>
           <CommandInput placeholder="Search..." />
           <CommandList>
@@ -564,7 +636,7 @@ function OperatorCombobox({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "bg-background hover:bg-background border-input justify-between px-3 font-normal outline-offset-0 outline-none focus-visible:outline-[3px]",
+            "justify-between border-input bg-background px-3 font-normal outline-none outline-offset-0 hover:bg-background focus-visible:outline-[3px]",
             className,
           )}
         >
@@ -573,10 +645,10 @@ function OperatorCombobox({
           ) : (
             <span className="text-muted-foreground">Operator</span>
           )}
-          <ChevronsUpDownIcon className="text-muted-foreground/80 size-4 shrink-0" aria-hidden="true" />
+          <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground/80" aria-hidden="true" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="border-input w-full min-w-[var(--radix-popper-anchor-width)] p-0" align="start">
+      <PopoverContent className="w-full min-w-[var(--radix-popper-anchor-width)] border-input p-0" align="start">
         <Command>
           <CommandList>
             <CommandGroup>
@@ -633,7 +705,7 @@ function ValuesPicker({
         align="start"
         side="bottom"
         sideOffset={8}
-        className="border-input w-full min-w-[var(--radix-popper-anchor-width)] p-0"
+        className="w-full min-w-[var(--radix-popper-anchor-width)] border-input p-0"
       >
         <Command>
           <CommandInput placeholder="Search..." />
@@ -677,6 +749,68 @@ function ValuesPicker({
   );
 }
 
+function DebouncedInput({
+  value: externalValue,
+  onChange,
+  delay = 300,
+  ...props
+}: Omit<React.ComponentProps<typeof Input>, "onChange"> & {
+  onChange: (value: string) => void;
+  delay?: number;
+}) {
+  const [value, setValue] = React.useState(externalValue ?? "");
+  const timerRef = React.useRef<ReturnType<typeof setTimeout>>(null);
+  const isComposingRef = React.useRef(false);
+  const onChangeRef = React.useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Sync external value only when it diverges and no pending timer
+  React.useEffect(() => {
+    if (!timerRef.current) {
+      setValue(externalValue ?? "");
+    }
+  }, [externalValue]);
+
+  React.useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const schedule = React.useCallback(
+    (val: string) => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        onChangeRef.current(val);
+      }, delay);
+    },
+    [delay],
+  );
+
+  return (
+    <Input
+      {...props}
+      value={value}
+      onCompositionStart={() => {
+        isComposingRef.current = true;
+      }}
+      onCompositionEnd={(e) => {
+        isComposingRef.current = false;
+        const next = (e.target as HTMLInputElement).value;
+        setValue(next);
+        schedule(next);
+      }}
+      onChange={(e) => {
+        const next = e.target.value;
+        setValue(next);
+        if (isComposingRef.current) return;
+        schedule(next);
+      }}
+    />
+  );
+}
+
 function FiltersBuilder({
   groups,
   totalActiveConditions,
@@ -684,6 +818,14 @@ function FiltersBuilder({
   onChange,
   variant = "popover",
   showHeader = variant === "popover",
+  savedFilters,
+  currentFilterId,
+  onSaveFilter,
+  onLoadFilter,
+  onCloneFilter,
+  onDeleteFilter,
+  onUpdateFilter,
+  onClose,
 }: {
   groups: FilterGroup[];
   totalActiveConditions: number;
@@ -691,9 +833,43 @@ function FiltersBuilder({
   onChange: (next: FilterGroup[]) => void;
   variant?: "popover" | "panel";
   showHeader?: boolean;
+  savedFilters?: SavedFilter[];
+  currentFilterId?: string | null;
+  onSaveFilter?: (name: string) => void;
+  onLoadFilter?: (filter: SavedFilter) => void;
+  onCloneFilter?: (filter: SavedFilter) => void;
+  onDeleteFilter?: (filter: SavedFilter) => void;
+  onUpdateFilter?: (filter: SavedFilter) => void;
+  onClose?: () => void;
 }) {
   const groupMatchMode = groups[0]?.join ?? "all";
   const showGroupConnector = groups.length > 1;
+  const [activeTab, setActiveTab] = React.useState<"filters" | "saved">("filters");
+  const [saveDialogOpen, setSaveDialogOpen] = React.useState(false);
+  const [filterName, setFilterName] = React.useState("");
+  const [editingFilter, setEditingFilter] = React.useState<SavedFilter | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<SavedFilter | null>(null);
+  const currentFilter = savedFilters?.find((f) => f.id === currentFilterId);
+
+  const handleSave = () => {
+    if (!filterName.trim()) return;
+    if (editingFilter && onUpdateFilter) {
+      onUpdateFilter({ ...editingFilter, name: filterName.trim(), updatedAt: Date.now() });
+    } else if (onSaveFilter) {
+      onSaveFilter(filterName.trim());
+    }
+    setFilterName("");
+    setEditingFilter(null);
+    setSaveDialogOpen(false);
+  };
+
+  const handleOverwrite = () => {
+    if (currentFilter && onUpdateFilter) {
+      onUpdateFilter({ ...currentFilter, groups, updatedAt: Date.now() });
+    }
+  };
+
+  const hasSavedFilters = savedFilters !== undefined;
 
   return (
     <div
@@ -704,7 +880,60 @@ function FiltersBuilder({
         variant === "panel" && "min-h-0 flex-1",
       )}
     >
-      {showHeader ? (
+      {/* Tabs Header */}
+      {hasSavedFilters && (
+        <div className="flex items-center justify-between gap-1 border-b bg-muted/40 px-3 py-1.5">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab("filters")}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm transition-colors",
+                activeTab === "filters"
+                  ? "bg-background font-medium text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Filters
+              {totalActiveConditions > 0 && (
+                <Badge variant="secondary" className="ml-1.5">
+                  {totalActiveConditions}
+                </Badge>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("saved")}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm transition-colors",
+                activeTab === "saved"
+                  ? "bg-background font-medium text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Saved
+              {savedFilters && savedFilters.length > 0 && (
+                <Badge variant="secondary" className="ml-1.5">
+                  {savedFilters.length}
+                </Badge>
+              )}
+            </button>
+          </div>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              title="Close"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <XIcon className="size-4" />
+              <span className="sr-only">Close</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {showHeader && !hasSavedFilters ? (
         <div className="flex items-center justify-between gap-4 border-b bg-muted/40 px-3 py-2">
           <div className="flex items-center gap-2">
             <div className="font-medium text-sm">Filters</div>
@@ -713,310 +942,551 @@ function FiltersBuilder({
         </div>
       ) : null}
 
-      <div className={cn("min-h-0 flex-1 overflow-y-auto", variant === "popover" ? "p-2" : "p-3")}>
-        <div className="relative">
-          {showGroupConnector ? (
-            <>
-              <div className="absolute top-0 bottom-0 left-8 w-px bg-border" />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-8 rounded-full"
-                onClick={() =>
-                  onChange(
-                    groups.map((g) => ({
-                      ...g,
-                      join: groupMatchMode === "all" ? ("any" as const) : ("all" as const),
-                    })),
-                  )
-                }
-                title="Toggle group relationship"
-              >
-                {groupMatchMode === "all" ? "AND" : "OR"}
-              </Button>
-            </>
-          ) : null}
+      {/* Filters Tab Content */}
+      {activeTab === "filters" && (
+        <>
+          <div className={cn("min-h-0 flex-1 overflow-y-auto", variant === "popover" ? "p-2" : "p-3")}>
+            <div className="relative">
+              {showGroupConnector ? (
+                <>
+                  <div className="absolute top-0 bottom-0 left-8 w-px bg-border" />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-8 rounded-full"
+                    onClick={() =>
+                      onChange(
+                        groups.map((g) => ({
+                          ...g,
+                          join: groupMatchMode === "all" ? ("any" as const) : ("all" as const),
+                        })),
+                      )
+                    }
+                    title="Toggle group relationship"
+                  >
+                    {groupMatchMode === "all" ? "AND" : "OR"}
+                  </Button>
+                </>
+              ) : null}
 
-          <div className={showGroupConnector ? "space-y-1.5 pl-16" : "space-y-1.5"}>
-            {groups.map((group, groupIndex) => (
-              <React.Fragment key={group.id}>
-                <div className="relative">
-                  {showGroupConnector ? (
-                    groupIndex === 0 ? (
-                      <div className="-left-8 absolute top-0 h-px w-8 bg-border" />
-                    ) : groupIndex === groups.length - 1 ? (
-                      <div className="-left-8 absolute bottom-0 h-px w-8 bg-border" />
-                    ) : null
-                  ) : null}
+              <div className={showGroupConnector ? "space-y-1.5 pl-16" : "space-y-1.5"}>
+                {groups.map((group, groupIndex) => (
+                  <React.Fragment key={group.id}>
+                    <div className="relative">
+                      {showGroupConnector ? (
+                        groupIndex === 0 ? (
+                          <div className="-left-8 absolute top-0 h-px w-8 bg-border" />
+                        ) : groupIndex === groups.length - 1 ? (
+                          <div className="-left-8 absolute bottom-0 h-px w-8 bg-border" />
+                        ) : null
+                      ) : null}
 
-                  <div className="rounded-lg border bg-muted/20 p-2">
-                    <div className="mt-1">
-                      {group.conditions.length === 0 ? (
-                        <div className="text-muted-foreground text-sm">No conditions yet.</div>
-                      ) : (
-                        <div className="relative">
-                          {group.conditions.length > 1 ? (
-                            <>
-                              <div className="absolute top-0 bottom-0 left-7 w-px bg-border" />
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-7 rounded-full"
-                                onClick={() =>
-                                  onChange(
-                                    groups.map((g) =>
-                                      g.id !== group.id
-                                        ? g
-                                        : { ...g, conditionsJoin: g.conditionsJoin === "all" ? "any" : "all" },
-                                    ),
-                                  )
-                                }
-                                title="Toggle condition relationship"
-                              >
-                                {group.conditionsJoin === "all" ? "AND" : "OR"}
-                              </Button>
-                            </>
-                          ) : null}
+                      <div className="rounded-lg border bg-muted/20 p-2">
+                        <div className="mt-1">
+                          {group.conditions.length === 0 ? (
+                            <div className="text-muted-foreground text-sm">No conditions yet.</div>
+                          ) : (
+                            <div className="relative">
+                              {group.conditions.length > 1 ? (
+                                <>
+                                  <div className="absolute top-0 bottom-0 left-7 w-px bg-border" />
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-7 rounded-full"
+                                    onClick={() =>
+                                      onChange(
+                                        groups.map((g) =>
+                                          g.id !== group.id
+                                            ? g
+                                            : { ...g, conditionsJoin: g.conditionsJoin === "all" ? "any" : "all" },
+                                        ),
+                                      )
+                                    }
+                                    title="Toggle condition relationship"
+                                  >
+                                    {group.conditionsJoin === "all" ? "AND" : "OR"}
+                                  </Button>
+                                </>
+                              ) : null}
 
-                          <div className={group.conditions.length > 1 ? "grid min-w-0 pl-16" : "grid min-w-0"}>
-                            {group.conditions.map((cond, conditionIndex) => {
-                              const columnDef = cond.field
-                                ? (FILTER_COLUMN_DEFS.find((f) => f.key === cond.field) ?? null)
-                                : null;
-                              const columnType = columnDef?.type ?? "string";
-                              const showMultiSelect = isMultiSelectOperator(cond.operator) && columnDef?.options;
-                              return (
-                                <div key={cond.id} className="relative min-w-0">
-                                  {group.conditions.length > 1 ? (
-                                    conditionIndex === 0 ? (
-                                      <div className="-left-9 absolute top-0 h-px w-9 bg-border" />
-                                    ) : conditionIndex === group.conditions.length - 1 ? (
-                                      <div className="-left-9 absolute bottom-0 h-px w-9 bg-border" />
-                                    ) : null
-                                  ) : null}
+                              <div className={group.conditions.length > 1 ? "grid min-w-0 pl-16" : "grid min-w-0"}>
+                                {group.conditions.map((cond, conditionIndex) => {
+                                  const columnDef = cond.field
+                                    ? (FILTER_COLUMN_DEFS.find((f) => f.key === cond.field) ?? null)
+                                    : null;
+                                  const columnType = columnDef?.type ?? "string";
+                                  const showMultiSelect = isMultiSelectOperator(cond.operator) && columnDef?.options;
+                                  return (
+                                    <div key={cond.id} className="relative min-w-0">
+                                      {group.conditions.length > 1 ? (
+                                        conditionIndex === 0 ? (
+                                          <div className="-left-9 absolute top-0 h-px w-9 bg-border" />
+                                        ) : conditionIndex === group.conditions.length - 1 ? (
+                                          <div className="-left-9 absolute bottom-0 h-px w-9 bg-border" />
+                                        ) : null
+                                      ) : null}
 
-                                  <div className="flex w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-md bg-background">
-                                    <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto px-2 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                                      <FieldCombobox
-                                        value={cond.field}
-                                        options={FILTER_COLUMN_DEFS}
-                                        placeholder="Field"
-                                        className="h-8 w-[10.5rem]"
-                                        onChange={(value) => {
-                                          const newColumnDef = FILTER_COLUMN_DEFS.find((f) => f.key === value);
-                                          const newType = newColumnDef?.type ?? "string";
-                                          const operators = getOperatorsForType(newType);
-                                          const defaultOperator = operators[0]?.key ?? "contains";
-                                          onChange(
-                                            groups.map((g) =>
-                                              g.id !== group.id
-                                                ? g
-                                                : {
-                                                    ...g,
-                                                    conditions: g.conditions.map((c) =>
-                                                      c.id === cond.id
-                                                        ? {
-                                                            ...c,
-                                                            field: value,
-                                                            operator: defaultOperator,
-                                                            value: "",
-                                                            values: [],
-                                                          }
-                                                        : c,
-                                                    ),
-                                                  },
-                                            ),
-                                          );
-                                        }}
-                                      />
+                                      <div className="flex w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-md bg-background">
+                                        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto px-2 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                          <FieldCombobox
+                                            value={cond.field}
+                                            options={FILTER_COLUMN_DEFS}
+                                            placeholder="Field"
+                                            className="h-8 w-[10.5rem]"
+                                            onChange={(value) => {
+                                              const newColumnDef = FILTER_COLUMN_DEFS.find((f) => f.key === value);
+                                              const newType = newColumnDef?.type ?? "string";
+                                              const operators = getOperatorsForType(newType);
+                                              const defaultOperator = operators[0]?.key ?? "contains";
+                                              onChange(
+                                                groups.map((g) =>
+                                                  g.id !== group.id
+                                                    ? g
+                                                    : {
+                                                        ...g,
+                                                        conditions: g.conditions.map((c) =>
+                                                          c.id === cond.id
+                                                            ? {
+                                                                ...c,
+                                                                field: value,
+                                                                operator: defaultOperator,
+                                                                value: "",
+                                                                values: [],
+                                                              }
+                                                            : c,
+                                                        ),
+                                                      },
+                                                ),
+                                              );
+                                            }}
+                                          />
 
-                                      <OperatorCombobox
-                                        value={cond.operator}
-                                        columnType={columnType}
-                                        className="h-8 w-[9rem]"
-                                        onChange={(value) => {
-                                          onChange(
-                                            groups.map((g) =>
-                                              g.id !== group.id
-                                                ? g
-                                                : {
-                                                    ...g,
-                                                    conditions: g.conditions.map((c) =>
-                                                      c.id === cond.id
-                                                        ? { ...c, operator: value, value: "", values: [] }
-                                                        : c,
-                                                    ),
-                                                  },
-                                            ),
-                                          );
-                                        }}
-                                      />
+                                          <OperatorCombobox
+                                            value={cond.operator}
+                                            columnType={columnType}
+                                            className="h-8 w-[9rem]"
+                                            onChange={(value) => {
+                                              onChange(
+                                                groups.map((g) =>
+                                                  g.id !== group.id
+                                                    ? g
+                                                    : {
+                                                        ...g,
+                                                        conditions: g.conditions.map((c) =>
+                                                          c.id === cond.id
+                                                            ? {
+                                                                ...c,
+                                                                operator: value,
+                                                                value: isMultiSelectOperator(value) ? "" : c.value,
+                                                                values: isMultiSelectOperator(value) ? c.values : [],
+                                                              }
+                                                            : c,
+                                                        ),
+                                                      },
+                                                ),
+                                              );
+                                            }}
+                                          />
 
-                                      {showMultiSelect ? (
-                                        <ValuesPicker
-                                          disabled={!cond.field}
-                                          options={columnDef?.options ?? []}
-                                          values={cond.values}
-                                          onChange={(nextValues) => {
-                                            onChange(
-                                              groups.map((g) =>
-                                                g.id !== group.id
-                                                  ? g
-                                                  : {
-                                                      ...g,
-                                                      conditions: g.conditions.map((c) =>
-                                                        c.id === cond.id ? { ...c, values: nextValues } : c,
-                                                      ),
-                                                    },
-                                              ),
-                                            );
-                                          }}
-                                        />
-                                      ) : (
-                                        <Input
-                                          value={cond.value}
-                                          onChange={(e) => {
-                                            onChange(
-                                              groups.map((g) =>
-                                                g.id !== group.id
-                                                  ? g
-                                                  : {
-                                                      ...g,
-                                                      conditions: g.conditions.map((c) =>
-                                                        c.id === cond.id ? { ...c, value: e.target.value } : c,
-                                                      ),
-                                                    },
-                                              ),
-                                            );
-                                          }}
-                                          placeholder="Value..."
-                                          className="h-8 min-w-0 flex-1"
-                                        />
-                                      )}
+                                          {showMultiSelect ? (
+                                            <ValuesPicker
+                                              disabled={!cond.field}
+                                              options={columnDef?.options ?? []}
+                                              values={cond.values}
+                                              onChange={(nextValues) => {
+                                                onChange(
+                                                  groups.map((g) =>
+                                                    g.id !== group.id
+                                                      ? g
+                                                      : {
+                                                          ...g,
+                                                          conditions: g.conditions.map((c) =>
+                                                            c.id === cond.id ? { ...c, values: nextValues } : c,
+                                                          ),
+                                                        },
+                                                  ),
+                                                );
+                                              }}
+                                            />
+                                          ) : (
+                                            <DebouncedInput
+                                              value={cond.value}
+                                              onChange={(val) => {
+                                                onChange(
+                                                  groups.map((g) =>
+                                                    g.id !== group.id
+                                                      ? g
+                                                      : {
+                                                          ...g,
+                                                          conditions: g.conditions.map((c) =>
+                                                            c.id === cond.id ? { ...c, value: val } : c,
+                                                          ),
+                                                        },
+                                                  ),
+                                                );
+                                              }}
+                                              placeholder="Value..."
+                                              className="h-8 min-w-0 flex-1"
+                                            />
+                                          )}
+                                        </div>
+
+                                        <div className="flex shrink-0 items-center">
+                                          <button
+                                            type="button"
+                                            className="px-2 py-1.5 text-muted-foreground hover:text-foreground"
+                                            title="Clone"
+                                            onClick={() => {
+                                              onChange(
+                                                groups.map((g) =>
+                                                  g.id !== group.id
+                                                    ? g
+                                                    : {
+                                                        ...g,
+                                                        conditions: [
+                                                          ...g.conditions.slice(0, conditionIndex + 1),
+                                                          { ...cond, id: newId("cond"), values: [...cond.values] },
+                                                          ...g.conditions.slice(conditionIndex + 1),
+                                                        ],
+                                                      },
+                                                ),
+                                              );
+                                            }}
+                                          >
+                                            <Copy className="size-4" />
+                                            <span className="sr-only">Clone</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="px-2 py-1.5 text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+                                            title="Remove"
+                                            disabled={groups.length === 1 && group.conditions.length === 1}
+                                            onClick={() => {
+                                              if (groups.length === 1 && group.conditions.length === 1) return;
+                                              onChange(
+                                                groups.flatMap((g) => {
+                                                  if (g.id !== group.id) return [g];
+                                                  const nextConditions = g.conditions.filter((c) => c.id !== cond.id);
+                                                  // If the group is empty, remove the group entirely.
+                                                  if (nextConditions.length === 0) return [];
+                                                  return [{ ...g, conditions: nextConditions }];
+                                                }),
+                                              );
+                                            }}
+                                          >
+                                            <Trash2 className="size-4" />
+                                            <span className="sr-only">Remove</span>
+                                          </button>
+                                        </div>
+                                      </div>
                                     </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
 
-                                    <div className="flex shrink-0 items-center">
-                                      <button
-                                        type="button"
-                                        className="px-2 py-1.5 text-muted-foreground hover:text-foreground"
-                                        title="Clone"
-                                        onClick={() => {
-                                          onChange(
-                                            groups.map((g) =>
-                                              g.id !== group.id
-                                                ? g
-                                                : {
-                                                    ...g,
-                                                    conditions: [
-                                                      ...g.conditions.slice(0, conditionIndex + 1),
-                                                      { ...cond, id: newId("cond"), values: [...cond.values] },
-                                                      ...g.conditions.slice(conditionIndex + 1),
-                                                    ],
-                                                  },
-                                            ),
-                                          );
-                                        }}
-                                      >
-                                        <Copy className="size-4" />
-                                        <span className="sr-only">Clone</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="px-2 py-1.5 text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-                                        title="Remove"
-                                        disabled={groups.length === 1 && group.conditions.length === 1}
-                                        onClick={() => {
-                                          if (groups.length === 1 && group.conditions.length === 1) return;
-                                          onChange(
-                                            groups.flatMap((g) => {
-                                              if (g.id !== group.id) return [g];
-                                              const nextConditions = g.conditions.filter((c) => c.id !== cond.id);
-                                              // If the group is empty, remove the group entirely.
-                                              if (nextConditions.length === 0) return [];
-                                              return [{ ...g, conditions: nextConditions }];
-                                            }),
-                                          );
-                                        }}
-                                      >
-                                        <Trash2 className="size-4" />
-                                        <span className="sr-only">Remove</span>
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-primary hover:text-primary"
+                              onClick={() => {
+                                onChange(
+                                  groups.map((g) =>
+                                    g.id !== group.id
+                                      ? g
+                                      : { ...g, conditions: [...g.conditions, createEmptyCondition()] },
+                                  ),
+                                );
+                              }}
+                            >
+                              <Plus className="size-4" />
+                              Add condition
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                const next = groups.filter((g) => g.id !== group.id);
+                                onChange(next.length > 0 ? next : [createEmptyGroup(groupMatchMode)]);
+                              }}
+                              title={`Remove group ${groupIndex + 1}`}
+                            >
+                              <Trash2 className="size-4" />
+                              Remove group
+                            </Button>
                           </div>
                         </div>
-                      )}
-                    </div>
-
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-primary hover:text-primary"
-                          onClick={() => {
-                            onChange(
-                              groups.map((g) =>
-                                g.id !== group.id ? g : { ...g, conditions: [...g.conditions, createEmptyCondition()] },
-                              ),
-                            );
-                          }}
-                        >
-                          <Plus className="size-4" />
-                          Add condition
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground hover:text-foreground"
-                          onClick={() => {
-                            const next = groups.filter((g) => g.id !== group.id);
-                            onChange(next.length > 0 ? next : [createEmptyGroup(groupMatchMode)]);
-                          }}
-                          title={`Remove group ${groupIndex + 1}`}
-                        >
-                          <Trash2 className="size-4" />
-                          Remove group
-                        </Button>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </React.Fragment>
-            ))}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="flex items-center justify-end gap-2 border-t bg-muted/40 px-3 py-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8"
-          onClick={() => onChange([...groups, createEmptyGroup(groupMatchMode)])}
-        >
-          <Plus className="size-4" />
-          Add group
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground hover:text-foreground"
-          onClick={onClearAll}
-          disabled={totalActiveConditions === 0}
-        >
-          Clear all
-        </Button>
-      </div>
+          <div className="flex items-center justify-between gap-2 border-t bg-muted/40 px-3 py-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => onChange([...groups, createEmptyGroup(groupMatchMode)])}
+            >
+              <Plus className="size-4" />
+              Add group
+            </Button>
+            <div className="flex items-center gap-2">
+              {hasSavedFilters && (
+                <>
+                  {currentFilter && (
+                    <>
+                      <span className="truncate text-muted-foreground text-xs" title={currentFilter.name}>
+                        {currentFilter.name}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={handleOverwrite}
+                        title="Overwrite current filter"
+                      >
+                        <Save className="size-3.5" />
+                        Overwrite
+                      </Button>
+                    </>
+                  )}
+                  <Popover open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+                    <PopoverTrigger asChild>
+                      <Button type="button" variant="outline" size="sm" className="h-8">
+                        <Save className="size-4" />
+                        Save
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-64 p-3">
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="filter-name" className="text-sm">
+                          Filter Name
+                        </Label>
+                        <Input
+                          id="filter-name"
+                          value={filterName}
+                          onChange={(e) => setFilterName(e.target.value)}
+                          placeholder="Enter filter name..."
+                          className="h-8"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSave();
+                          }}
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSaveDialogOpen(false);
+                              setFilterName("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button type="button" size="sm" onClick={handleSave} disabled={!filterName.trim()}>
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={onClearAll}
+                disabled={totalActiveConditions === 0}
+              >
+                Clear all
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Saved Tab Content */}
+      {activeTab === "saved" && hasSavedFilters && (
+        <div className="flex min-h-0 flex-1 flex-col">
+          {savedFilters && savedFilters.length > 0 ? (
+            <div className="min-h-0 flex-1 divide-y overflow-y-auto [&>*:last-child]:border-b">
+              {savedFilters.map((filter) => {
+                const conditionCount = filter.groups.reduce(
+                  (acc, g) => acc + g.conditions.filter((c) => c.field !== null).length,
+                  0,
+                );
+                const isEditing = editingFilter?.id === filter.id;
+                return (
+                  // biome-ignore lint/a11y/useSemanticElements: container div with double-click, not a primary action
+                  <div
+                    key={filter.id}
+                    role="button"
+                    tabIndex={0}
+                    className={cn("flex cursor-default items-center justify-between gap-2 px-3 py-2 hover:bg-muted/50")}
+                    onDoubleClick={() => {
+                      if (!isEditing) {
+                        onLoadFilter?.(filter);
+                        setActiveTab("filters");
+                      }
+                    }}
+                  >
+                    {isEditing ? (
+                      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <Input
+                          autoFocus
+                          value={filterName}
+                          onChange={(e) => setFilterName(e.target.value)}
+                          className="h-7 min-w-0 flex-1 text-sm"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSave();
+                            if (e.key === "Escape") {
+                              setEditingFilter(null);
+                              setFilterName("");
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 shrink-0 p-0"
+                          onClick={handleSave}
+                          disabled={!filterName.trim()}
+                          title="Confirm"
+                        >
+                          <CheckIcon className="size-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 shrink-0 p-0"
+                          onClick={() => {
+                            setEditingFilter(null);
+                            setFilterName("");
+                          }}
+                          title="Cancel"
+                        >
+                          <XIcon className="size-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <span className="min-w-0 flex-1 truncate text-sm">{filter.name}</span>
+                          <Badge variant="secondary" className="shrink-0">
+                            {conditionCount} conditions
+                          </Badge>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 px-2 text-primary"
+                            onClick={() => {
+                              onLoadFilter?.(filter);
+                              setActiveTab("filters");
+                            }}
+                            title="Apply Filter"
+                          >
+                            <ArrowDownToLine className="size-3.5" />
+                            <span className="font-medium text-xs">Apply Filter</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => {
+                              setEditingFilter(filter);
+                              setFilterName(filter.name);
+                            }}
+                            title="Rename"
+                          >
+                            <Pencil className="size-3.5" />
+                            <span className="sr-only">Rename</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => onCloneFilter?.(filter)}
+                            title="Clone"
+                          >
+                            <Copy className="size-3.5" />
+                            <span className="sr-only">Clone</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            onClick={() => setDeleteTarget(filter)}
+                            title="Delete"
+                          >
+                            <Trash2 className="size-3.5" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+              <div className="text-muted-foreground text-sm">No saved filters yet</div>
+              <div className="text-muted-foreground/60 text-xs">
+                Save your current filter configuration from the Filters tab
+              </div>
+            </div>
+          )}
+
+          {/* Delete Confirmation Dialog */}
+          <DeleteConfirmDialog
+            open={deleteTarget !== null}
+            onOpenChange={(open) => {
+              if (!open) setDeleteTarget(null);
+            }}
+            onConfirm={() => {
+              if (deleteTarget) {
+                onDeleteFilter?.(deleteTarget);
+                setDeleteTarget(null);
+              }
+            }}
+            itemCount={1}
+            itemLabel={deleteTarget ? `"${deleteTarget.name}"` : undefined}
+            title="Delete Saved Filter"
+            description={
+              deleteTarget
+                ? `Are you sure you want to delete the saved filter "${deleteTarget.name}"? This action cannot be undone.`
+                : undefined
+            }
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -1025,14 +1495,12 @@ function FiltersPanelDrawer({
   open,
   panelWidth,
   setPanelWidth,
-  totalActiveConditions,
   onOpenChange,
   children,
 }: {
   open: boolean;
   panelWidth: number;
   setPanelWidth: React.Dispatch<React.SetStateAction<number>>;
-  totalActiveConditions: number;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
 }) {
@@ -1105,22 +1573,6 @@ function FiltersPanelDrawer({
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-2 border-b bg-muted/40 p-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="min-w-0 truncate font-medium text-sm">Filters</div>
-              {totalActiveConditions > 0 ? <Badge variant="secondary">{totalActiveConditions}</Badge> : null}
-            </div>
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              title="Close"
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <XIcon className="size-4" />
-              <span className="sr-only">Close</span>
-            </button>
-          </div>
-
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
         </div>
       </div>,
@@ -1137,25 +1589,7 @@ function FiltersPanelDrawer({
       dismissible={false}
     >
       <DrawerContent hideOverlay className="overflow-hidden">
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="flex items-center justify-between gap-2 border-b bg-muted/40 p-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="min-w-0 truncate font-medium text-sm">Filters</div>
-              {totalActiveConditions > 0 ? <Badge variant="secondary">{totalActiveConditions}</Badge> : null}
-            </div>
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              title="Close"
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <XIcon className="size-4" />
-              <span className="sr-only">Close</span>
-            </button>
-          </div>
-
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
-        </div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
       </DrawerContent>
     </Drawer>
   );
@@ -1233,6 +1667,15 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     });
   });
   const columns = rowDragEnabled ? withDndColumn(dashboardColumns) : dashboardColumns;
+  const globalFilterFn = React.useCallback(
+    (row: Row<z.infer<typeof sectionSchema>>, _columnId: string, filterValue: unknown) => {
+      const groups = filterValue as FilterGroup[] | undefined;
+      if (!groups || groups.length === 0) return true;
+      return evaluateFilterGroups(groups, row.original as unknown as Record<string, unknown>);
+    },
+    [],
+  );
+
   const table = useDataTableInstance({
     data,
     columns,
@@ -1251,6 +1694,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
       serverIpAddress: false,
     },
     getRowId: (row) => row.id.toString(),
+    globalFilterFn,
   });
   const [tabs, setTabs] = React.useState([
     { value: "outline", label: "Traffic" },
@@ -1265,6 +1709,8 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
   const [filtersPanelWidth, setFiltersPanelWidth] = React.useState(720);
   const [urlQuery, setUrlQuery] = React.useState("");
   const [deleteTargets, setDeleteTargets] = React.useState<z.infer<typeof sectionSchema>[]>([]);
+  const [savedFilters, setSavedFilters] = React.useState<SavedFilter[]>([]);
+  const [currentFilterId, setCurrentFilterId] = React.useState<string | null>(null);
   const facetFilters = React.useMemo(() => deriveFacetFilters(filterGroups), [filterGroups]);
 
   const setFacetFilter = React.useCallback((group: FilterFieldKey, values?: string[]) => {
@@ -1308,6 +1754,52 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
   const writeToClipboard = React.useCallback((value: string) => {
     if (!value) return;
     void navigator.clipboard?.writeText(value);
+  }, []);
+
+  const handleSaveFilter = React.useCallback(
+    (name: string) => {
+      const newFilter: SavedFilter = {
+        id: newId("filter"),
+        name,
+        groups: JSON.parse(JSON.stringify(filterGroups)),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      setSavedFilters((prev) => [...prev, newFilter]);
+      setCurrentFilterId(newFilter.id);
+    },
+    [filterGroups],
+  );
+
+  const handleLoadFilter = React.useCallback((filter: SavedFilter) => {
+    setFilterGroups(JSON.parse(JSON.stringify(filter.groups)));
+    setCurrentFilterId(filter.id);
+    setFiltersEnabled(true);
+  }, []);
+
+  const handleCloneFilter = React.useCallback((filter: SavedFilter) => {
+    const clonedFilter: SavedFilter = {
+      id: newId("filter"),
+      name: `${filter.name} (Copy)`,
+      groups: JSON.parse(JSON.stringify(filter.groups)),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setSavedFilters((prev) => [...prev, clonedFilter]);
+  }, []);
+
+  const handleDeleteFilter = React.useCallback(
+    (filter: SavedFilter) => {
+      setSavedFilters((prev) => prev.filter((f) => f.id !== filter.id));
+      if (currentFilterId === filter.id) {
+        setCurrentFilterId(null);
+      }
+    },
+    [currentFilterId],
+  );
+
+  const handleUpdateFilter = React.useCallback((filter: SavedFilter) => {
+    setSavedFilters((prev) => prev.map((f) => (f.id === filter.id ? filter : f)));
   }, []);
 
   const handleDeleteRows = React.useCallback((rows: Row<z.infer<typeof sectionSchema>>[]) => {
@@ -1386,17 +1878,16 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     const q = urlQuery.trim();
     if (q) next.push({ id: "url", value: q });
 
-    for (const [key, values] of Object.entries(facetFilters) as Array<[FilterFieldKey, string[] | undefined]>) {
-      if (!values?.length) continue;
-      next.push({ id: key, value: values });
-    }
-
     return next;
-  }, [facetFilters, filtersEnabled, urlQuery]);
+  }, [filtersEnabled, urlQuery]);
 
   React.useEffect(() => {
     table.setColumnFilters(appliedColumnFilters);
   }, [appliedColumnFilters, table]);
+
+  React.useEffect(() => {
+    table.setGlobalFilter(filtersEnabled ? filterGroups : undefined);
+  }, [filterGroups, filtersEnabled, table]);
 
   React.useEffect(() => {
     if (activeTab !== "outline" && filtersPanelOpen) {
@@ -1584,7 +2075,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                   listClassName="max-h-none overflow-visible"
                 />
                 <DataTableFacetedFilter
-                  title="Status"
+                  title="Code"
                   options={[
                     { label: "1xx", value: "1xx" },
                     { label: "2xx", value: "2xx" },
@@ -1653,7 +2144,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
               onOpenChange={setFiltersPanelOpen}
               panelWidth={filtersPanelWidth}
               setPanelWidth={setFiltersPanelWidth}
-              totalActiveConditions={totalSelectedFilters}
             >
               <FiltersBuilder
                 groups={filterGroups}
@@ -1662,6 +2152,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                   setFilterGroups([createEmptyGroup()]);
                   setUrlQuery("");
                   setFiltersEnabled(false);
+                  setCurrentFilterId(null);
                 }}
                 onChange={(next) => {
                   setFilterGroups(next);
@@ -1669,6 +2160,14 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                 }}
                 variant="panel"
                 showHeader={false}
+                savedFilters={savedFilters}
+                currentFilterId={currentFilterId}
+                onSaveFilter={handleSaveFilter}
+                onLoadFilter={handleLoadFilter}
+                onCloneFilter={handleCloneFilter}
+                onDeleteFilter={handleDeleteFilter}
+                onUpdateFilter={handleUpdateFilter}
+                onClose={() => setFiltersPanelOpen(false)}
               />
             </FiltersPanelDrawer>
             <DeleteConfirmDialog
