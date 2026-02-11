@@ -429,14 +429,17 @@ function createEmptyGroup(join: FilterGroupJoin = "all"): FilterGroup {
 
 function deriveFacetFilters(groups: FilterGroup[]): FacetFilters {
   const next: FacetFilters = {};
+  const validKeys: FilterFieldKey[] = ["client", "host", "format", "statusGroup"];
   for (const group of groups) {
     for (const cond of group.conditions) {
       if (!cond.field) continue;
       if (cond.operator !== "in") continue;
       if (cond.values.length === 0) continue;
+      if (!validKeys.includes(cond.field as FilterFieldKey)) continue;
 
-      const existing = next[cond.field] ?? [];
-      next[cond.field] = Array.from(new Set([...existing, ...cond.values]));
+      const key = cond.field as FilterFieldKey;
+      const existing = next[key] ?? [];
+      next[key] = Array.from(new Set([...existing, ...cond.values]));
     }
   }
   return next;
@@ -1255,7 +1258,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
               ...first,
               conditions: [
                 ...first.conditions.filter((c) => c.field !== null),
-                { id: newId("cond"), field: group, operator: "in", values: nextValues },
+                { id: newId("cond"), field: group, operator: "in" as FilterOperator, value: "", values: nextValues },
               ],
             }
           : first;
