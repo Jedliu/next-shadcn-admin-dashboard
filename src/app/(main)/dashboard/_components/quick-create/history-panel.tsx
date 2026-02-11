@@ -398,8 +398,8 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
             <AlertDialogDescription className="text-[15px]">
               This action cannot be undone.{" "}
               {deleteTargets.length > 1
-                ? `This will permanently delete ${deleteTargets.length} records.`
-                : `This will permanently delete "${deleteTargets[0]?.title}".`}
+                ? `This will delete ${deleteTargets.length} records permanently.`
+                : `This will delete "${deleteTargets[0]?.title}" permanently.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -10,6 +10,17 @@ import type { z } from "zod";
 
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
 import { SelectionActionBar } from "@/components/data-table/selection-action-bar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -939,6 +950,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
   const [filtersPanelOpen, setFiltersPanelOpen] = React.useState(false);
   const [filtersPanelWidth, setFiltersPanelWidth] = React.useState(416);
   const [urlQuery, setUrlQuery] = React.useState("");
+  const [deleteTargets, setDeleteTargets] = React.useState<z.infer<typeof sectionSchema>[]>([]);
   const facetFilters = React.useMemo(() => deriveFacetFilters(filterGroups), [filterGroups]);
 
   const setFacetFilter = React.useCallback((group: FilterFieldKey, values?: string[]) => {
@@ -985,15 +997,18 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
     void navigator.clipboard?.writeText(value);
   }, []);
 
-  const handleDeleteRows = React.useCallback(
-    (rows: Row<z.infer<typeof sectionSchema>>[]) => {
-      if (rows.length === 0) return;
-      const idsToDelete = new Set(rows.map((r) => r.original.id));
-      setData((prev) => prev.filter((item) => !idsToDelete.has(item.id)));
-      table.resetRowSelection();
-    },
-    [table],
-  );
+  const handleDeleteRows = React.useCallback((rows: Row<z.infer<typeof sectionSchema>>[]) => {
+    if (rows.length === 0) return;
+    setDeleteTargets(rows.map((r) => r.original));
+  }, []);
+
+  const confirmDelete = React.useCallback(() => {
+    if (deleteTargets.length === 0) return;
+    const idsToDelete = new Set(deleteTargets.map((t) => t.id));
+    setData((prev) => prev.filter((item) => !idsToDelete.has(item.id)));
+    table.resetRowSelection();
+    setDeleteTargets([]);
+  }, [deleteTargets, table]);
 
   const rowContextMenu = React.useCallback(
     ({
@@ -1349,6 +1364,30 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                 { label: "Delete", icon: Trash2 },
               ]}
             />
+            <AlertDialog open={deleteTargets.length > 0} onOpenChange={(open) => !open && setDeleteTargets([])}>
+              <AlertDialogContent size="sm">
+                <AlertDialogHeader>
+                  <div className="flex items-center gap-3">
+                    <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                      <Trash2 />
+                    </AlertDialogMedia>
+                    <AlertDialogTitle>{deleteTargets.length > 1 ? "Delete items?" : "Delete item?"}</AlertDialogTitle>
+                  </div>
+                  <AlertDialogDescription>
+                    This action cannot be undone!{" "}
+                    {deleteTargets.length > 1
+                      ? `This will delete ${deleteTargets.length} records permanently.`
+                      : `This will delete ID "${deleteTargets[0]?.id}" permanently.`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
+                  <AlertDialogAction variant="destructive" onClick={confirmDelete}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
       </div>
