@@ -281,11 +281,29 @@ const NUMBER_OPERATORS: Array<{ key: FilterOperator; label: string }> = [
   { key: "notEquals", label: "Not Equal" },
   { key: "lt", label: "<" },
   { key: "gte", label: ">=" },
+  { key: "contains", label: "Contains" },
+  { key: "notContains", label: "Not Contains" },
+  { key: "startsWith", label: "Start With" },
+  { key: "endsWith", label: "End With" },
+  { key: "matchWildcard", label: "Match Wildcard" },
+  { key: "notMatchWildcard", label: "Not Match Wildcard" },
+  { key: "matchRegex", label: "Match Regex" },
+  { key: "notMatchRegex", label: "Not Match Regex" },
 ];
 
 const ENUM_OPERATORS: Array<{ key: FilterOperator; label: string }> = [
   { key: "in", label: "Is any of" },
   { key: "notIn", label: "Is none of" },
+  { key: "contains", label: "Contains" },
+  { key: "notContains", label: "Not Contains" },
+  { key: "startsWith", label: "Start With" },
+  { key: "endsWith", label: "End With" },
+  { key: "equals", label: "Equal" },
+  { key: "notEquals", label: "Not Equal" },
+  { key: "matchWildcard", label: "Match Wildcard" },
+  { key: "notMatchWildcard", label: "Not Match Wildcard" },
+  { key: "matchRegex", label: "Match Regex" },
+  { key: "notMatchRegex", label: "Not Match Regex" },
 ];
 
 const BOOLEAN_OPERATORS: Array<{ key: FilterOperator; label: string }> = [
@@ -1238,7 +1256,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
   const [filterGroups, setFilterGroups] = React.useState<FilterGroup[]>(() => [createEmptyGroup()]);
   const [filtersEnabled, setFiltersEnabled] = React.useState(false); // Also set filtersEnabled to false initially
   const [filtersPanelOpen, setFiltersPanelOpen] = React.useState(false);
-  const [filtersPanelWidth, setFiltersPanelWidth] = React.useState(416);
+  const [filtersPanelWidth, setFiltersPanelWidth] = React.useState(720);
   const [urlQuery, setUrlQuery] = React.useState("");
   const [deleteTargets, setDeleteTargets] = React.useState<z.infer<typeof sectionSchema>[]>([]);
   const facetFilters = React.useMemo(() => deriveFacetFilters(filterGroups), [filterGroups]);
