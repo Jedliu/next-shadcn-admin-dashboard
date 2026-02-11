@@ -383,7 +383,7 @@ export function DataTable<TData, TValue>({
     return (
       <ContextMenu key={row.id}>
         <ContextMenuTrigger asChild>{rowElement}</ContextMenuTrigger>
-        <ContextMenuContent>{menu}</ContextMenuContent>
+        <ContextMenuContent className="min-w-48">{menu}</ContextMenuContent>
       </ContextMenu>
     );
   };

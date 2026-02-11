@@ -2,12 +2,22 @@
 
 import * as React from "react";
 
-import { Clock, Copy, Database, Hand, Pin, Search, Trash2, Zap } from "lucide-react";
+import { Clock, Copy, Database, Hand, OctagonAlert, Pin, Search, Trash2, X, Zap } from "lucide-react";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu";
+import { ContextMenuItem, ContextMenuSeparator, ContextMenuShortcut } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { cn } from "@/lib/utils";
@@ -99,7 +109,8 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
   const { historyFilters, setHistoryFilters, historySearch, setHistorySearch, historyPinnedIds, setHistoryPinnedIds } =
     useQuickCreate();
 
-  const [items] = React.useState<HistoryItem[]>(seedHistory);
+  const [items, setItems] = React.useState<HistoryItem[]>(seedHistory);
+  const [deleteTargets, setDeleteTargets] = React.useState<HistoryItem[]>([]);
   const pinnedSet = React.useMemo(() => new Set(historyPinnedIds), [historyPinnedIds]);
   const pinnedSetRef = React.useRef(pinnedSet);
   pinnedSetRef.current = pinnedSet;
@@ -128,11 +139,45 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
   }, [historyFilters, pinnedSet, searchFilteredItems]);
 
   const togglePinned = React.useCallback(
-    (id: string) => {
-      setHistoryPinnedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+    (ids: string[]) => {
+      setHistoryPinnedIds((prev) => {
+        const prevSet = new Set(prev);
+        const pinnedCount = ids.filter((id) => prevSet.has(id)).length;
+        const shouldUnpin = pinnedCount > ids.length / 2;
+        if (shouldUnpin) {
+          return prev.filter((id) => !ids.includes(id));
+        }
+        const newIds = ids.filter((id) => !prevSet.has(id));
+        return [...prev, ...newIds];
+      });
     },
     [setHistoryPinnedIds],
   );
+
+  const handleClone = React.useCallback((targets: HistoryItem[]) => {
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+    const clones = targets.map((item) => ({
+      ...item,
+      id: `${item.id}-clone-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      title: `${item.title} copy`,
+      timestamp,
+      kind: "manual" as HistoryKind,
+    }));
+    setItems((prev) => [...clones, ...prev]);
+  }, []);
+
+  const handleDelete = React.useCallback((targets: HistoryItem[]) => {
+    setDeleteTargets(targets);
+  }, []);
+
+  const confirmDelete = React.useCallback(() => {
+    if (deleteTargets.length === 0) return;
+    const idsToDelete = new Set(deleteTargets.map((t) => t.id));
+    setItems((prev) => prev.filter((item) => !idsToDelete.has(item.id)));
+    setHistoryPinnedIds((prev) => prev.filter((id) => !idsToDelete.has(id)));
+    setDeleteTargets([]);
+  }, [deleteTargets, setHistoryPinnedIds]);
 
   const columns = React.useMemo<import("@tanstack/react-table").ColumnDef<HistoryItem>[]>(
     () => [
@@ -220,42 +265,100 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
     getRowId,
   });
 
+  // Handle Backspace key to delete selected rows
+  const tableRef = React.useRef<HTMLDivElement>(null);
+  const tableActiveRef = React.useRef(false);
+
+  React.useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!tableRef.current) return;
+      if (!(event.target instanceof Node)) return;
+      tableActiveRef.current = tableRef.current.contains(event.target);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.target instanceof Element && event.target.closest("input,textarea,[contenteditable='true']")) return;
+      if (!tableActiveRef.current) return;
+
+      if (event.key === "Escape") {
+        // If context menu is open, let it close first
+        if (document.querySelector("[data-radix-menu-content]")) return;
+        const selectedRows = table.getSelectedRowModel().rows;
+        if (selectedRows.length === 0) return;
+        event.preventDefault();
+        table.resetRowSelection();
+        return;
+      }
+
+      if (event.key === "Backspace" || event.key === "Delete") {
+        const selectedRows = table.getSelectedRowModel().rows;
+        if (selectedRows.length === 0) return;
+        event.preventDefault();
+        handleDelete(selectedRows.map((r) => r.original));
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [table, handleDelete]);
+
   const rowContextMenu = React.useCallback(
-    ({ row }: { row: { original: HistoryItem } }) => {
-      const isPinned = pinnedSet.has(row.original.id);
+    ({ row, selectedRows }: { row: { original: HistoryItem }; selectedRows: { original: HistoryItem }[] }) => {
+      const targets = selectedRows.length > 1 ? selectedRows.map((r) => r.original) : [row.original];
+      const targetIds = targets.map((t) => t.id);
+      const pinnedCount = targets.filter((t) => pinnedSet.has(t.id)).length;
+      const shouldUnpin = pinnedCount > targets.length / 2;
       return (
         <>
           <ContextMenuItem
             onSelect={(event) => {
               event.preventDefault();
-              togglePinned(row.original.id);
+              togglePinned(targetIds);
             }}
           >
             <Pin className="size-4 text-muted-foreground" />
-            {isPinned ? "Unpin" : "Pin"}
+            {shouldUnpin ? "Unpin" : "Pin"}
+            {targets.length > 1 ? ` (${targets.length})` : ""}
           </ContextMenuItem>
           <ContextMenuItem
             onSelect={(event) => {
               event.preventDefault();
+              handleClone(targets);
             }}
           >
             <Copy className="size-4 text-muted-foreground" />
-            Copy
+            Clone{targets.length > 1 ? ` (${targets.length})` : ""}
           </ContextMenuItem>
           <ContextMenuSeparator />
+          <ContextMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              table.resetRowSelection();
+            }}
+          >
+            <X className="size-4 text-muted-foreground" />
+            Clear selection
+            <ContextMenuShortcut>Esc</ContextMenuShortcut>
+          </ContextMenuItem>
           <ContextMenuItem
             variant="destructive"
             onSelect={(event) => {
               event.preventDefault();
+              handleDelete(targets);
             }}
           >
             <Trash2 className="size-4" />
-            Delete
+            Delete{targets.length > 1 ? ` (${targets.length})` : ""}
+            <ContextMenuShortcut>⌫</ContextMenuShortcut>
           </ContextMenuItem>
         </>
       );
     },
-    [pinnedSet, togglePinned],
+    [pinnedSet, togglePinned, handleClone, handleDelete, table],
   );
 
   return (
@@ -285,7 +388,7 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={tableRef} className="min-h-0 flex-1 overflow-y-auto">
         {visibleItems.length ? (
           <div className="min-h-0 flex-1">
             <DataTable
@@ -305,6 +408,29 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
           </div>
         )}
       </div>
+
+      <AlertDialog open={deleteTargets.length > 0} onOpenChange={(open) => !open && setDeleteTargets([])}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                <OctagonAlert className="h-5 w-5 text-destructive" />
+              </div>
+              {deleteTargets.length > 1 ? "Delete history items?" : "Delete history item?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[15px]">
+              This action cannot be undone.{" "}
+              {deleteTargets.length > 1
+                ? `This will permanently delete ${deleteTargets.length} records.`
+                : `This will permanently delete "${deleteTargets[0]?.title}".`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
