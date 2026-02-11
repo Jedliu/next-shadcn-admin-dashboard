@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, FilterFn } from "@tanstack/react-table";
 import { CircleCheck, EllipsisVertical, Loader, Lock } from "lucide-react";
 import type { z } from "zod";
 
@@ -35,6 +35,12 @@ function formatBytes(value?: number) {
   const digits = idx === 0 ? 0 : idx === 1 ? 0 : 1;
   return `${v.toFixed(digits)} ${units[idx]}`;
 }
+
+const multiValueIncludesFilter: FilterFn<z.infer<typeof sectionSchema>> = (row, id, value) => {
+  if (!Array.isArray(value) || value.length === 0) return true;
+  const cellValue = row.getValue<string | undefined>(id) ?? "";
+  return value.includes(cellValue);
+};
 
 export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
   {
@@ -120,11 +126,7 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     enableHiding: false,
     enableResizing: false,
     enableSorting: false,
-    filterFn: (row, id, value) => {
-      if (!Array.isArray(value) || value.length === 0) return true;
-      const v = row.getValue<string | undefined>(id) ?? "";
-      return value.includes(v);
-    },
+    filterFn: multiValueIncludesFilter,
   },
   {
     accessorKey: "statusGroup",
@@ -133,11 +135,7 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     enableHiding: false,
     enableResizing: false,
     enableSorting: false,
-    filterFn: (row, id, value) => {
-      if (!Array.isArray(value) || value.length === 0) return true;
-      const v = row.getValue<string | undefined>(id) ?? "";
-      return value.includes(v);
-    },
+    filterFn: multiValueIncludesFilter,
   },
   {
     accessorKey: "host",
@@ -146,11 +144,7 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     size: 220,
     minSize: 140,
     meta: { label: "Host", parent: "url", order: 1 },
-    filterFn: (row, id, value) => {
-      if (!Array.isArray(value) || value.length === 0) return true;
-      const v = row.getValue<string | undefined>(id) ?? "";
-      return value.includes(v);
-    },
+    filterFn: multiValueIncludesFilter,
   },
   {
     accessorKey: "path",
@@ -176,11 +170,7 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
     minSize: 110,
     maxSize: 180,
     meta: { label: "Client", order: 5 },
-    filterFn: (row, id, value) => {
-      if (!Array.isArray(value) || value.length === 0) return true;
-      const v = row.getValue<string | undefined>(id) ?? "";
-      return value.includes(v);
-    },
+    filterFn: multiValueIncludesFilter,
   },
   {
     accessorKey: "method",
@@ -212,7 +202,7 @@ export const dashboardColumns: ColumnDef<z.infer<typeof sectionSchema>>[] = [
           )}
         >
           {status === "Done" ? (
-            <CircleCheck className="fill-emerald-500 stroke-white dark:fill-emerald-400 dark:stroke-black" />
+            <CircleCheck className="size-3 fill-emerald-500 stroke-white dark:fill-emerald-400 dark:stroke-black" />
           ) : (
             <Loader className={cn("size-3", status === "In Process" && "text-blue-500 dark:text-blue-400")} />
           )}
