@@ -68,6 +68,7 @@ type WorkspaceTableProps = {
     selectedRows: Row<z.infer<typeof sectionSchema>>[];
   }) => React.ReactNode;
   onDeleteRows: (rows: Row<z.infer<typeof sectionSchema>>[]) => void;
+  isDeleteDialogOpen: boolean;
 };
 
 function WorkspaceTable({
@@ -78,11 +79,14 @@ function WorkspaceTable({
   rowDensity,
   rowContextMenu,
   onDeleteRows,
+  isDeleteDialogOpen,
 }: WorkspaceTableProps) {
   const { open, setItem, setOpen } = useTableCellViewer();
   const tableRef = React.useRef<HTMLDivElement | null>(null);
   const isActiveRef = React.useRef(false);
   const currentRowIdRef = React.useRef<string | null>(null);
+  const isDeleteDialogOpenRef = React.useRef(isDeleteDialogOpen);
+  isDeleteDialogOpenRef.current = isDeleteDialogOpen;
 
   const isEditableTarget = React.useCallback((target: EventTarget | null) => {
     if (!(target instanceof HTMLElement)) return false;
@@ -129,6 +133,8 @@ function WorkspaceTable({
       if (event.key === "Escape") {
         // If context menu is open, let it close first
         if (document.querySelector("[data-radix-menu-content]")) return;
+        // If delete confirm dialog is open, let it close first
+        if (isDeleteDialogOpenRef.current) return;
         const selectedRows = table.getSelectedRowModel().rows;
         if (selectedRows.length === 0) return;
         event.preventDefault();
@@ -1441,6 +1447,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof sectionS
                     rowDensity={rowDensity}
                     rowContextMenu={rowContextMenu}
                     onDeleteRows={handleDeleteRows}
+                    isDeleteDialogOpen={deleteTargets.length > 0}
                   />
                 </div>
               </div>

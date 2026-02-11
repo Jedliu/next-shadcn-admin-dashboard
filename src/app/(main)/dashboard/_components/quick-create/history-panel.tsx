@@ -102,6 +102,9 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
 
   const [items, setItems] = React.useState<HistoryItem[]>(seedHistory);
   const [deleteTargets, setDeleteTargets] = React.useState<HistoryItem[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const isDeleteDialogOpenRef = React.useRef(isDeleteDialogOpen);
+  isDeleteDialogOpenRef.current = isDeleteDialogOpen;
   const pinnedSet = React.useMemo(() => new Set(historyPinnedIds), [historyPinnedIds]);
   const pinnedSetRef = React.useRef(pinnedSet);
   pinnedSetRef.current = pinnedSet;
@@ -160,6 +163,7 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
 
   const handleDelete = React.useCallback((targets: HistoryItem[]) => {
     setDeleteTargets(targets);
+    setIsDeleteDialogOpen(true);
   }, []);
 
   const confirmDelete = React.useCallback(() => {
@@ -168,6 +172,7 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
     setItems((prev) => prev.filter((item) => !idsToDelete.has(item.id)));
     setHistoryPinnedIds((prev) => prev.filter((id) => !idsToDelete.has(id)));
     setDeleteTargets([]);
+    setIsDeleteDialogOpen(false);
   }, [deleteTargets, setHistoryPinnedIds]);
 
   const columns = React.useMemo<import("@tanstack/react-table").ColumnDef<HistoryItem>[]>(
@@ -274,6 +279,8 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
       if (event.key === "Escape") {
         // If context menu is open, let it close first
         if (document.querySelector("[data-radix-menu-content]")) return;
+        // If delete confirm dialog is open, let it close first
+        if (isDeleteDialogOpenRef.current) return;
         const selectedRows = table.getSelectedRowModel().rows;
         if (selectedRows.length === 0) return;
         event.preventDefault();
@@ -377,8 +384,18 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
       </div>
 
       <DeleteConfirmDialog
-        open={deleteTargets.length > 0}
-        onOpenChange={(open) => !open && setDeleteTargets([])}
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            // Delay state update to ensure keydown handler sees the dialog as still open
+            setTimeout(() => {
+              setIsDeleteDialogOpen(false);
+              setDeleteTargets([]);
+            }, 0);
+          } else {
+            setIsDeleteDialogOpen(open);
+          }
+        }}
         onConfirm={confirmDelete}
         title={deleteTargets.length > 1 ? "Delete history items?" : "Delete history item?"}
         itemCount={deleteTargets.length}
