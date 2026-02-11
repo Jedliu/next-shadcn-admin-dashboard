@@ -363,7 +363,6 @@ export function HistoryPanel({ className }: { readonly className?: string }) {
           <DataTable
             table={table}
             columns={columns}
-            density="compact"
             rowContextMenu={rowContextMenu}
             enableKeyboardSelection
             fillEmptyRows
